@@ -41,7 +41,7 @@ Rules: don't start paid work (P3 billing) until Gate 2 passes. Each phase ends w
 
 Development
 - [x] P0.1 Pick the name → **qbeam**. Criteria: 3–6 letters, free on PyPI, npm, Play, App Store, GitHub org and a `.dev` domain
-- [ ] P0.2 `git init`, public GitHub repo, Apache-2.0 (or MIT) license, CODE_OF_CONDUCT, SECURITY.md, acceptable-use line in README — done: git init, Apache-2.0, SECURITY.md, README + acceptable use, THIRD_PARTY_NOTICES.md; remaining: public GitHub repo, CODE_OF_CONDUCT
+- [ ] P0.2 `git init`, public GitHub repo, Apache-2.0 (or MIT) license, CODE_OF_CONDUCT, SECURITY.md, acceptable-use line in README — done: git init, Apache-2.0, SECURITY.md, README + acceptable use, THIRD_PARTY_NOTICES.md; public repo github.com/qbeam/qbeam; remaining: CODE_OF_CONDUCT
 - [x] P0.3 Monorepo layout (move existing code in, keep it working):
   ```
   protocol/   SPEC.md + test-vectors/ (inputs, params, expected frames)
@@ -252,6 +252,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-09-30 · Commits rewritten to GitHub no-reply author; public repo github.com/qbeam/qbeam created and pushed, topics set. PyPI/npm 0.0.1 artifacts built in py/dist and js/qbeam-0.0.1.tgz · Next: user runs twine upload + npm publish
 
 - 2026-09-30 · qbeam 0.0.1 built for PyPI (py/src/qbeam, stdlib only, assets packaged) and npm (js/bin/qbeam.js, single-file send + receive, exports fountain codec). Tested: clean venv install, output matches pre-package encoder, uvx on Python 3.8 and 3.13, npm install from tarball, fountain round-trip with 30–50% frame loss for Node- and Python-made pages. Fixed: Node CLI left the second __TITLE__ unfilled · Next: user publishes to PyPI/npm, push to GitHub
 

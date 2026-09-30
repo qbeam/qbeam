@@ -6,13 +6,14 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 - Strategy doc: https://claude.ai/code/artifact/83b0e616-c086-499b-8b24-ff42837f18c3
 - Build plan with checkboxes: [PLAN.md](PLAN.md)
+- Repo: https://github.com/qbeam/qbeam (public; commit as the GitHub no-reply address, set in this repo's git config)
 
 ## Current status
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
 - **Last done:** qbeam 0.0.1 packaged for PyPI and npm and tested (clean installs, Python 3.8/3.12/3.13 via uvx, npm round-trip decode) (2026-09-30)
-- **Next up:** user publishes qbeam 0.0.1 to PyPI and npm (P0.10); push to github.com/qbeam; then P0.4 spec v2, P0.8 baseline tests, P0.12 rig, P0.13 speed spike
+- **Next up:** user publishes qbeam 0.0.1 to PyPI and npm (P0.10); then P0.4 spec v2, P0.8 baseline tests, P0.12 rig, P0.13 speed spike. P0.2 still needs a code of conduct
 - **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
 
 ## Tracking rules

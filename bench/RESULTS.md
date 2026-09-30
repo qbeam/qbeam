@@ -44,6 +44,22 @@ Browser loopback (sender canvas → captureStream → worker pool, no optics), C
 4. On paper, 3x2 v30-L at 15 fps offers 152 KB/s, above the ~130 KB/s parity target. Whether a phone camera
    delivers it (focus, moiré, motion blur, frame tearing, phone CPU) is the open question for the camera runs.
 
+### Competitors (researched 2026-10-01, not yet measured on our setup)
+
+| Tool | Approach | Published result | Notes |
+| --- | --- | --- | --- |
+| [Decimen](https://decimen.app) v0.4.0 | Monochrome QR v40-L, 4 codes/frame, pinned mask, LT fountain (1.04x useful overhead), zxing-cpp WASM worker pool, crop tracking after 2 full scans, camera 960x1280 @60 | **418.5 KB/s sustained, 601.5 peak** (1 MB in 2.45 s) | 49" Odyssey G9 → iPhone 17 Pro Max (Safari); phone→phone 199.2. AGPL-3.0 since v0.4.0: study only, don't copy code |
+| [libcimbar / CameraFileCopy](https://github.com/sz3/libcimbar) | Colour tile barcode (4 symbol bits + 2 colour bits per tile, ~9,300 B/image), Reed-Solomon, wirehair fountain, zstd | ~106 KB/s | MPL-2.0 |
+
+Monochrome QR (Decimen) beats colour tiles (cimbar) by ~4x, so colour is not the main lever.
+
+### Decode cost by zxing setting (Node, Mac, 2026-10-01)
+
+6 v30-L codes at 3.5 px/module, blurred + noise, 1920x1080 (`bench/spike/decode_opts.mjs`): 8.1–11.0 ms per frame
+for full-frame scans and 8.9–10.0 ms for per-code crops, across LocalAverage / GlobalHistogram / FixedThreshold
+binarizers and tryHarder on/off; all read 6/6. The cost is per-code decoding (~1.5 ms/code here, ~7 ms on the
+phone), so crop tracking only pays off when codes cover a small part of the frame.
+
 ### Camera runs
 
 **Verdict (2026-10-01): plain QR reaches competitor speed in a browser. P0.13 answered; no colour fallback needed.**

@@ -26,6 +26,7 @@
     <label>camera <select id="res"><option value="1280x720">720p</option><option value="1920x1080" selected>1080p</option><option value="3840x2160">4K</option></select></label>
     <label>fps <select id="camfps"><option>30</option><option selected>60</option></select></label>
     <label><input id="tryHarder" type="checkbox" checked> tryHarder</label>
+    <label><input id="track" type="checkbox"> track regions</label>
     <label>frame copy <select id="copyPath"><option value="yplane" selected>Y plane</option><option value="videoframe">VideoFrame RGBA</option><option value="canvas">canvas</option></select></label>
     <button id="startBtn">Start camera</button>
     <button id="resetBtn">Reset stats</button>
@@ -45,6 +46,7 @@
     <div class="cell"><b id="mixed">–</b><span>frames with 2 sender frames (tearing)</span></div>
     <div class="cell"><b id="senderCfg">–</b><span>sender config</span></div>
     <div class="cell"><b id="workers">–</b><span>decode workers</span></div>
+    <div class="cell"><b id="trackInfo">–</b><span>tracked decodes / full scans</span></div>
   </div>
   <div class="row"><button id="copyBtn">Copy result</button></div>
   <pre id="result"></pre>
@@ -57,13 +59,14 @@
   var $ = function (id) { return document.getElementById(id); };
   var video = $("video");
   var NW = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
-  var workers = [], busy = [], track = null;
+  var workers = [], busy = [], track = null, regions = new Map();
   var S; // stats
 
   function reset() {
     S = { t0: performance.now(), camFrames: 0, decFrames: 0, decMs: 0, readMs: 0, zxMs: 0, codes: 0, mixed: 0, found: 0,
           seen: new Map(), unique: 0, uniqueBytes: 0, firstAt: 0, minFrame: Infinity, maxFrame: -1,
-          window: [], cfg: null };
+          window: [], cfg: null, trackedJobs: 0, fullJobs: 0, sinceFull: 0 };
+    regions = new Map();
   }
   reset();
 
@@ -88,9 +91,20 @@
     S.frameSize = m.w + "x" + m.h;
     if (Math.max(m.w, m.h) < 1280) $("err").textContent = "Decoding " + S.frameSize + " frames: too coarse for dense codes. Use Chrome (Firefox on Android gives 640x480).";
     S.decFrames++; S.decMs += m.readMs + m.decodeMs; S.readMs += m.readMs; S.zxMs += m.decodeMs; S.found += m.found;
-    var frames = {};
-    m.payloads.forEach(function (buf) {
+    if (m.tracked) S.trackedJobs++; else S.fullJobs++;
+    var frames = {}, seenIdx = {};
+    m.payloads.forEach(function (buf, pi) {
       var b = new Uint8Array(buf);
+      var pos = m.positions && m.positions[pi];
+      if (pos && b.length >= 11) {
+        var xs = pos.map(function (p) { return p[0]; }), ys = pos.map(function (p) { return p[1]; });
+        var x = Math.min.apply(null, xs), y = Math.min.apply(null, ys);
+        // Pad by ~3 modules: enough for hand shake between full scans, less than the 8-module gap to the next code.
+        var w = Math.max.apply(null, xs) - x, h = Math.max.apply(null, ys) - y;
+        var pad = 3 * Math.max(w, h) / (17 + 4 * (b[2] >> 1));
+        regions.set(b[10], { key: b[10], x: x - pad, y: y - pad, w: w + 2 * pad, h: h + 2 * pad, missed: 0 });
+        seenIdx[b[10]] = true;
+      }
       if (b.length < 11 || b[0] !== 0x51 || b[1] !== 0x53) return;
       S.codes++;
       var ver = b[2] >> 1, ecc = b[2] & 1 ? "M" : "L", cols = b[3], rows = b[4], fps = b[5];
@@ -109,6 +123,15 @@
       }
     });
     if (Object.keys(frames).length > 1) S.mixed++;
+    if (m.tracked) regions.forEach(function (r, k) { if (!seenIdx[k] && ++r.missed > 30) regions.delete(k); });
+  }
+
+  // Full scan when tracking is off, when we don't know where all the codes are, or every 30th job (to pick up moved
+  // or new codes); otherwise decode only the crops around known codes.
+  function pickRegions() {
+    var want = S.cfg ? S.cfg.count : 0;
+    if (!$("track").checked || !want || regions.size < want || ++S.sinceFull >= 30) { S.sinceFull = 0; return null; }
+    return Array.from(regions.values()).map(function (r) { return { key: r.key, x: r.x, y: r.y, w: r.w, h: r.h }; });
   }
 
   function onFrame() {
@@ -119,7 +142,8 @@
       if ($("copyPath").value !== "canvas" && window.VideoFrame) {
         try {
           var vf = new VideoFrame(video);
-          workers[wi].postMessage({ frame: vf, id: S.camFrames, tryHarder: $("tryHarder").checked, path: $("copyPath").value }, [vf]);
+          workers[wi].postMessage({ frame: vf, id: S.camFrames, tryHarder: $("tryHarder").checked, path: $("copyPath").value,
+                                    regions: pickRegions() }, [vf]);
         } catch (err) {
           busy[wi] = false;
           $("copyPath").value = "canvas";
@@ -167,6 +191,7 @@
       zxingMs: S.decFrames ? +(S.zxMs / S.decFrames).toFixed(1) : null,
       symbolsLocatedPerFrame: S.decFrames ? +(S.found / S.decFrames).toFixed(2) : null,
       codesPerDecodedFrame: S.decFrames ? +(S.codes / S.decFrames).toFixed(2) : null,
+      trackedDecodes: S.trackedJobs, fullScans: S.fullJobs, tracking: $("track").checked,
       tornFrames: S.mixed, uniqueCodes: S.unique, workers: NW, tryHarder: $("tryHarder").checked, copyPath: $("copyPath").value,
       userAgent: navigator.userAgent,
     };
@@ -185,6 +210,7 @@
     $("perFrame").textContent = r.codesPerDecodedFrame != null ? r.codesPerDecodedFrame + " / " + r.symbolsLocatedPerFrame : "–";
     $("mixed").textContent = r.tornFrames;
     $("senderCfg").textContent = r.sender || "–";
+    $("trackInfo").textContent = r.trackedDecodes + " / " + r.fullScans;
   }, 500);
 
   $("startBtn").addEventListener("click", async function () {

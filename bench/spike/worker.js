@@ -17,9 +17,9 @@ let zx = null;
 let canvas = null, ctx = null, rgba = null, raw = null, luma = null;
 
 // Encoded zxing options for readBarcodesFromPixmap (what readBarcodes builds internally; checked by gray_check.mjs).
-const zxOptions = (tryHarder) => ({
+const zxOptions = (tryHarder, maxSymbols = 16) => ({
   formats: "QRCode", tryHarder, tryRotate: false, tryInvert: false, tryDownscale: false, tryDenoise: false,
-  binarizer: 0, isPure: false, downscaleFactor: 3, downscaleThreshold: 500, minLineCount: 2, maxNumberOfSymbols: 16,
+  binarizer: 0, isPure: false, downscaleFactor: 3, downscaleThreshold: 500, minLineCount: 2, maxNumberOfSymbols: maxSymbols,
   validateOptionalChecksum: false, returnErrors: true, eanAddOnSymbol: 0, textMode: 2, characterSet: 0,
   tryCode39ExtendedMode: true,
 });
@@ -46,12 +46,17 @@ async function lumaFromVideoFrame(frame) {
   }
 }
 
-function readLuma(img, tryHarder) {
+function readLuma(img, tryHarder, maxSymbols = 16) {
   const ptr = zx._malloc(img.luma.byteLength);
   try {
     zx.HEAPU8.set(img.luma, ptr);
-    const v = zx.readBarcodesFromPixmap(ptr, img.width, img.height, zxOptions(tryHarder)), out = [];
-    for (let i = 0; i < v.size(); i++) out.push(v.get(i));
+    const v = zx.readBarcodesFromPixmap(ptr, img.width, img.height, zxOptions(tryHarder, maxSymbols)), out = [];
+    // Copy each result out now: its bytes/position point into WASM memory that the next decode reuses.
+    for (let i = 0; i < v.size(); i++) {
+      const r = v.get(i), p = r.position;
+      out.push({ isValid: r.isValid, bytes: new Uint8Array(r.bytes),
+        position: p && { topLeft: { ...p.topLeft }, topRight: { ...p.topRight }, bottomRight: { ...p.bottomRight }, bottomLeft: { ...p.bottomLeft } } });
+    }
     return out;
   } finally {
     zx._free(ptr);
@@ -79,8 +84,32 @@ async function pixelsFromVideoFrame(frame) {
   }
 }
 
+// Region tracking: decode small crops around where each code was last seen instead of scanning the whole frame.
+// `regions` are boxes in full-frame luma coordinates; results' positions are mapped back into frame coordinates.
+let crop = null;
+function readRegions(img, regions, tryHarder) {
+  const out = [];
+  for (const r of regions) {
+    const x0 = Math.max(0, Math.floor(r.x)), y0 = Math.max(0, Math.floor(r.y));
+    const x1 = Math.min(img.width, Math.ceil(r.x + r.w)), y1 = Math.min(img.height, Math.ceil(r.y + r.h));
+    const cw = x1 - x0, ch = y1 - y0;
+    if (cw < 40 || ch < 40) continue;
+    if (!crop || crop.byteLength < cw * ch) crop = new Uint8Array(cw * ch);
+    for (let y = 0; y < ch; y++) crop.set(img.luma.subarray((y0 + y) * img.width + x0, (y0 + y) * img.width + x1), y * cw);
+    const res = readLuma({ luma: crop.subarray(0, cw * ch), width: cw, height: ch }, tryHarder, 3);
+    for (const q of res) {
+      if (q.position) for (const k of ["topLeft", "topRight", "bottomRight", "bottomLeft"]) {
+        q.position[k] = { x: q.position[k].x + x0, y: q.position[k].y + y0 };
+      }
+      q.region = r.key;
+      out.push(q);
+    }
+  }
+  return out;
+}
+
 self.onmessage = async (e) => {
-  const { bitmap, frame, id, tryHarder, path } = e.data;
+  const { bitmap, frame, id, tryHarder, path, regions } = e.data;
   if (!zx) zx = await zxReady;
   const t0 = performance.now();
   let img;
@@ -92,17 +121,25 @@ self.onmessage = async (e) => {
     return;
   }
   const t1 = performance.now();
-  let results = [];
+  let results = [], tracked = false;
   try {
-    results = img.luma ? readLuma(img, tryHarder) : await readBarcodes(img, {
-      formats: ["QRCode"], tryHarder, tryRotate: false, tryInvert: false, tryDownscale: false, maxNumberOfSymbols: 16,
-      returnErrors: true, // also report codes that were located but failed to decode
-    });
+    if (img.luma && regions && regions.length) {
+      tracked = true;
+      results = readRegions(img, regions, tryHarder);
+    } else {
+      results = img.luma ? readLuma(img, tryHarder) : await readBarcodes(img, {
+        formats: ["QRCode"], tryHarder, tryRotate: false, tryInvert: false, tryDownscale: false, maxNumberOfSymbols: 16,
+        returnErrors: true, // also report codes that were located but failed to decode
+      });
+    }
   } catch (err) {
     self.postMessage({ id, error: String(err) });
     return;
   }
   const t2 = performance.now();
-  const payloads = results.filter((r) => r.isValid).map((r) => r.bytes.slice().buffer);
-  self.postMessage({ id, payloads, readMs: t1 - t0, decodeMs: t2 - t1, found: results.length, w: img.width, h: img.height }, payloads);
+  const valid = results.filter((r) => r.isValid);
+  const payloads = valid.map((r) => r.bytes.slice().buffer);
+  const positions = valid.map((r) => r.position ? [r.position.topLeft, r.position.topRight, r.position.bottomRight, r.position.bottomLeft].map((p) => [p.x, p.y]) : null);
+  self.postMessage({ id, payloads, positions, tracked, regionsTried: tracked ? regions.length : 0,
+    readMs: t1 - t0, decodeMs: t2 - t1, found: results.length, w: img.width, h: img.height }, payloads);
 };

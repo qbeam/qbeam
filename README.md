@@ -1,9 +1,9 @@
-# &lt;name&gt; — files over light
+# qbeam — files over light
 
 Move a file from one screen to another device's camera as an animated QR stream. No network, no USB,
 no install on the receiving side. Transfers are verified with SHA-256.
 
-> Status: early. The product name, packaging and speed work are in progress; see [PLAN.md](PLAN.md).
+> Status: early. Packaging and speed work are in progress; see [PLAN.md](PLAN.md).
 
 ## Try it today
 

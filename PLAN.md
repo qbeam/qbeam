@@ -5,7 +5,7 @@ Strategy (why and for whom): https://claude.ai/code/artifact/83b0e616-c086-499b-
 This is the working plan. Tick boxes as work lands and add a line to the progress log at the bottom.
 `CLAUDE.md` holds the one-paragraph "where are we" summary; this file holds the detail.
 
-`<name>` = product/command name, still to be picked (task P0.1). Replace it everywhere once chosen.
+Product and command name: **qbeam** (chosen 2026-09-30; free on PyPI, npm, `.dev`, GitHub, Homebrew at the time).
 
 ## Status at a glance
 
@@ -40,7 +40,7 @@ Rules: don't start paid work (P3 billing) until Gate 2 passes. Each phase ends w
 ## P0 — Foundations (week 1)
 
 Development
-- [ ] P0.1 Pick the name: 3–6 letters, free on PyPI, npm, Play, App Store, GitHub org and a `.dev` domain
+- [x] P0.1 Pick the name → **qbeam**. Criteria: 3–6 letters, free on PyPI, npm, Play, App Store, GitHub org and a `.dev` domain
 - [ ] P0.2 `git init`, public GitHub repo, Apache-2.0 (or MIT) license, CODE_OF_CONDUCT, SECURITY.md, acceptable-use line in README — done: git init, Apache-2.0, SECURITY.md, README + acceptable use, THIRD_PARTY_NOTICES.md; remaining: public GitHub repo, CODE_OF_CONDUCT
 - [x] P0.3 Monorepo layout (move existing code in, keep it working):
   ```
@@ -57,7 +57,7 @@ Development
 - [ ] P0.4 Write `protocol/SPEC.md` v2 describing today's `Q2H`/`Q2D` text frames exactly (the baseline)
 - [ ] P0.5 Draft protocol v3 (binary frames): magic + version byte, session id, K, length, block size, ESI, flags; header frame with SHA-256, filename, encoding (gz / raw / tar.gz / tar.xz), optional encryption params. Frame-level CRC32. Designed for speed from day one: binary payloads up to QR v40-L (2,953 B), multiple codes per displayed frame, and a sparse fountain code (below).
 - [ ] P0.5a Choose the sparse fountain code: RaptorQ (RFC 6330) vs. Wirehair vs. a tuned LT code. The current dense GF(2) code decodes in O(K²) and is too slow for multi-MB files at high block rates. Check licences of existing implementations (Wirehair BSD; libcimbar — confirm) and whether a WASM build is practical.
-- [ ] P0.6 Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install <name>[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
+- [ ] P0.6 Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install qbeam[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
 - [ ] P0.12 **Build the benchmark rig first and measure competitors on it:** fixed monitor, 3 Android phones (low/mid/high) + 1 iPhone on a stand; measure cimbar (CameraFileCopy) and Decimen goodput for 1 MB and 10 MB files. Their numbers on our rig become the parity target.
 - [ ] P0.13 **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
 - [ ] P0.7 CI skeleton (GitHub Actions): ubuntu, macos, windows; Python 3.8 → 3.13; Node 18/20/22
@@ -67,7 +67,7 @@ Testing
 - [ ] P0.9 Generate the first test vectors from today's encoder; both codecs must reproduce them byte for byte
 
 Marketing
-- [ ] P0.10 Register domain, GitHub org, PyPI/npm names (placeholder packages), X / Bluesky / YouTube handles
+- [ ] P0.10 Register qbeam.dev, `qbeam` on PyPI and npm (publish a real 0.0.1 of the current encoder rather than an empty placeholder, which PyPI discourages), GitHub org `qbeam`, X / Bluesky / YouTube handles. Not yet checked: Play Store, App Store, trademarks (USPTO/EUIPO), qbeam.com
 - [ ] P0.11 One-page landing site: tagline, 10-second GIF placeholder, "star on GitHub"
 
 ---
@@ -75,7 +75,7 @@ Marketing
 ## P1 — Python CLI + terminal mode (Oct 8–31)
 
 Development
-- [ ] P1.1 Package `encode.py` as `<name>` with entry point; commands: `send`, `receive`, `version`
+- [ ] P1.1 Package `encode.py` as `qbeam` with entry point; commands: `send`, `receive`, `version`
 - [ ] P1.2 `send <file>` / `send -` (stdin) / `send <dir> --archive` (respect `.gitignore` + existing junk patterns) / `--exclude`
 - [ ] P1.3 Vendor a pure-Python QR encoder (e.g. Nayuki `qrcodegen`, MIT) for terminal mode
 - [ ] P1.4 Terminal renderer: Unicode half-blocks (2 modules per char), ANSI cursor-home redraw, auto-fit QR version to terminal size, `--invert` for light themes, clean exit on Ctrl-C (restore cursor/screen)
@@ -84,8 +84,8 @@ Development
 - [ ] P1.6 Pixel sender: `send` opens the full-speed sender page (self-contained HTML → temp file → `webbrowser`) by default when a display is available; `--tty` forces terminal mode; headless sessions fall back to terminal automatically. All heavy encoding (fountain + QR) runs in JS/WASM in the page, not in Python.
 - [ ] P1.7 `receive`: opens the offline decoder page (webcam) for laptop-to-laptop / phone-to-laptop
 - [ ] P1.8 Print SHA-256 and a short summary (size, compressed size, frames, estimated time) before sending
-- [ ] P1.9 Build a single-file `<name>.pyz` (stdlib `zipapp`) in CI; attach to GitHub releases with checksums
-- [ ] P1.10 Publish to TestPyPI, then PyPI; verify `uvx <name>`, `pipx install <name>`, `pip install --user <name>`
+- [ ] P1.9 Build a single-file `qbeam.pyz` (stdlib `zipapp`) in CI; attach to GitHub releases with checksums
+- [ ] P1.10 Publish to TestPyPI, then PyPI; verify `uvx qbeam`, `pipx install qbeam`, `pip install --user qbeam`
 - [ ] P1.11 Decoder: in-browser `.tar.gz` handling decision (save as-is vs. prefer gzip'd tar for single-file receivers)
 
 Testing
@@ -122,7 +122,7 @@ Development
 - [ ] P2.5 Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR
 - [ ] P2.6 Receiver hint: decoder shows "missing X% of frames — try `--speed safe`" when its drop rate is high
 - [ ] P2.7 Keep v2 text frames decodable (backward compatibility) for one release
-- [ ] P2.8 npm package: `npx <name> send|receive` using the shared JS codec + a terminal renderer in Node
+- [ ] P2.8 npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
 - [ ] P2.9 Hosted web decoder as an installable offline PWA; also downloadable single HTML
 - [ ] P2.10 Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it
 
@@ -154,7 +154,7 @@ Development
 - [ ] P3.2 Kotlin codec port (fountain + v3 frames); passes all shared test vectors
 - [ ] P3.3 Save via Storage Access Framework to a user-chosen folder; share sheet; transfer history
 - [ ] P3.4 Archive extraction in-app (tar, gz, xz) with zip-slip protection and size caps
-- [ ] P3.5 Phone → laptop: app displays the QR stream from a picked file; laptop runs `<name> receive`
+- [ ] P3.5 Phone → laptop: app displays the QR stream from a picked file; laptop runs `qbeam receive`
 - [ ] P3.6 Passphrase decryption (per P0.6)
 - [ ] P3.7 **Trial:** count only completed, checksum-verified transfers; counter visible from #5; transfer in progress at the limit always finishes; unlock screen links to the free web decoder
 - [ ] P3.8 Google Play Billing one-time product ($6.99) + restore purchases; offline-tolerant entitlement cache
@@ -172,7 +172,7 @@ Testing
 
 Marketing
 - [ ] P3.18 Side-by-side speed video (app vs. web decoder); launch post + Show HN follow-up
-- [ ] P3.19 In-app "Sent with `<name>` — `uvx <name>`" line on the success screen
+- [ ] P3.19 In-app "Sent with `qbeam` — `uvx qbeam`" line on the success screen
 - [ ] P3.20 Ask happy users for Play reviews after their 3rd successful transfer (in-app review API)
 
 **Gate 3:** app goodput ≥ the fastest competitor on the same rig (target ≥ 130 KB/s); 100 paid unlocks; rating ≥ 4.3. The paid unlock doesn't ship until the speed part passes.
@@ -252,6 +252,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-09-30 · Initial commit 963936a. P0.1 done: name is qbeam (free on PyPI, npm, .dev, GitHub, Homebrew when checked); placeholders replaced in repo · Next: P0.10 register qbeam.dev + packages (user), P0.4 spec v2
 
 - 2026-09-30 · P0.3 done, P0.2 mostly done: git init (main), Apache-2.0, README/SECURITY/THIRD_PARTY_NOTICES, .gitignore; code moved to py/ js/ web/ (vendor, dist), stub READMEs for protocol/ android/ ios/ go/ bench/ docs/. Verified: rebuilt decoder.html byte-identical; sender page identical except session id · Next: P0.1 name, P0.4 spec v2
 - 2026-09-30 · Speed parity with fastest competitor made a hard requirement: added rig + competitor baseline (P0.12), speed spike (P0.13), sparse fountain code (P0.5a, P2.1a), pixel sender default (P1.6), parity gates 2 and 3 · Next: P0.1 pick the name

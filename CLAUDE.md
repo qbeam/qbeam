@@ -1,6 +1,6 @@
 # CLAUDE.md
 
-Offline file transfer over animated QR codes: a file is shown as a looping QR stream on one screen and
+**qbeam** — offline file transfer over animated QR codes: a file is shown as a looping QR stream on one screen and
 rebuilt from a camera on another device. For developers in restricted, monitored environments
 (VDI, cloud shells, locked-down laptops, sandboxes).
 
@@ -11,9 +11,9 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** git repo, Apache-2.0 license, README/SECURITY/notices, monorepo layout; outputs verified identical to before the move (2026-09-30)
-- **Next up:** P0.1 pick the name, P0.4 spec v2, P0.8 baseline tests, P0.12 benchmark rig, P0.13 speed spike. P0.2 still needs the public GitHub repo and a code of conduct
-- **Blockers / open decisions:** product name; encryption approach (P0.6); sparse fountain code choice (P0.5a)
+- **Last done:** initial commit 963936a (layout, license, docs); name chosen: qbeam (2026-09-30)
+- **Next up:** P0.10 register qbeam.dev / PyPI / npm / GitHub org (user), P0.4 spec v2, P0.8 baseline tests, P0.12 benchmark rig, P0.13 speed spike. P0.2 still needs the public GitHub repo and a code of conduct
+- **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
 
 ## Tracking rules
 

@@ -6,4 +6,4 @@ Python sender. Today: `encode.py` (stdlib only), which builds a self-contained s
 python3 py/encode.py path/to/file
 ```
 
-Next (PLAN P1): package as `<name>` with `send` / `receive` commands, terminal mode, and a single-file `.pyz`. Must stay stdlib-only at runtime.
+Next (PLAN P1): package as `qbeam` with `send` / `receive` commands, terminal mode, and a single-file `.pyz`. Must stay stdlib-only at runtime.

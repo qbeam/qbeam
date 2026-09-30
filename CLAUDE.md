@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** CI (tests on 3 OSes × Python 3.8/3.12/3.13, package build, no-admin install check) and automatic release on merge to main via trusted publishing; Windows UTF-8 fixes (2026-09-30)
-- **Next up:** user sets up PyPI pending publisher + npm first publish and trusted publisher (docs/RELEASING.md), then push; then P0.4 spec v2, P0.12 rig, P0.13 speed spike. P0.2 still needs a code of conduct
+- **Last done:** qbeam@0.0.1 live on npm; CI + release-on-merge workflows committed, not yet pushed (2026-10-01)
+- **Next up:** user adds npm trusted publisher + PyPI pending publisher (docs/RELEASING.md), then push main (publishes PyPI 0.0.1); then P0.4 spec v2, P0.12 rig, P0.13 speed spike. P0.2 still needs a code of conduct
 - **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
 
 ## Tracking rules

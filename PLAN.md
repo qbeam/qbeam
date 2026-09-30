@@ -67,7 +67,7 @@ Testing
 - [ ] P0.9 Generate the first test vectors from today's encoder; both codecs must reproduce them byte for byte
 
 Marketing
-- [ ] P0.10 Register qbeam.dev, `qbeam` on PyPI and npm (publish a real 0.0.1 of the current encoder rather than an empty placeholder, which PyPI discourages), GitHub org `qbeam`, X / Bluesky / YouTube handles. Not yet checked: Play Store, App Store, trademarks (USPTO/EUIPO), qbeam.com
+- [ ] P0.10 (done: qbeam.dev domain, GitHub org, npm qbeam@0.0.1; remaining: PyPI via first automatic release, social handles, store/trademark checks) Register qbeam.dev, `qbeam` on PyPI and npm (publish a real 0.0.1 of the current encoder rather than an empty placeholder, which PyPI discourages), GitHub org `qbeam`, X / Bluesky / YouTube handles. Not yet checked: Play Store, App Store, trademarks (USPTO/EUIPO), qbeam.com
 - [ ] P0.11 One-page landing site: tagline, 10-second GIF placeholder, "star on GitHub"
 
 ---
@@ -252,6 +252,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · qbeam@0.0.1 published to npm by hand (verified with npx); fixed npm publish paths (./) in release.yml and RELEASING.md · Next: user adds npm trusted publisher + PyPI pending publisher, then push to main publishes PyPI 0.0.1
 
 - 2026-09-30 · P0.7 + P0.8 done: CI on 3 OSes, package + no-admin install jobs (uvx/npx), release-on-merge with trusted publishing (docs/RELEASING.md), scripts/version.py keeps versions in sync; tests: 6 Python CLI tests, 6 cross-CLI fountain round-trips. Fixed Windows cp1252 crashes (UTF-8 file I/O, safe console output) · Next: registry setup (user), push
 

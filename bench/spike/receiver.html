@@ -26,7 +26,7 @@
     <label>camera <select id="res"><option value="1280x720">720p</option><option value="1920x1080" selected>1080p</option><option value="3840x2160">4K</option></select></label>
     <label>fps <select id="camfps"><option>30</option><option selected>60</option></select></label>
     <label><input id="tryHarder" type="checkbox" checked> tryHarder</label>
-    <label>frame copy <select id="copyPath"><option value="videoframe" selected>VideoFrame</option><option value="canvas">canvas</option></select></label>
+    <label>frame copy <select id="copyPath"><option value="yplane" selected>Y plane</option><option value="videoframe">VideoFrame RGBA</option><option value="canvas">canvas</option></select></label>
     <button id="startBtn">Start camera</button>
     <button id="resetBtn">Reset stats</button>
   </div>
@@ -79,7 +79,10 @@
     var m = e.data;
     if (m.error) {
       $("err").textContent = m.error;
-      if (m.copyFailed && $("copyPath").value === "videoframe") { $("copyPath").value = "canvas"; $("err").textContent += " (switched to canvas copy)"; }
+      if (m.copyFailed && $("copyPath").value !== "canvas") {
+        $("copyPath").value = $("copyPath").value === "yplane" ? "videoframe" : "canvas";
+        $("err").textContent += " (switched to " + $("copyPath").value + " copy)";
+      }
       return;
     }
     S.decFrames++; S.decMs += m.readMs + m.decodeMs; S.readMs += m.readMs; S.zxMs += m.decodeMs; S.found += m.found;
@@ -111,10 +114,10 @@
     var wi = busy.indexOf(false);
     if (wi >= 0 && video.videoWidth) {
       busy[wi] = true;
-      if ($("copyPath").value === "videoframe" && window.VideoFrame) {
+      if ($("copyPath").value !== "canvas" && window.VideoFrame) {
         try {
           var vf = new VideoFrame(video);
-          workers[wi].postMessage({ frame: vf, id: S.camFrames, tryHarder: $("tryHarder").checked }, [vf]);
+          workers[wi].postMessage({ frame: vf, id: S.camFrames, tryHarder: $("tryHarder").checked, path: $("copyPath").value }, [vf]);
         } catch (err) {
           busy[wi] = false;
           $("copyPath").value = "canvas";

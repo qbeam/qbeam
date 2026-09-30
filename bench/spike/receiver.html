@@ -26,6 +26,7 @@
     <label>camera <select id="res"><option value="1280x720">720p</option><option value="1920x1080" selected>1080p</option><option value="3840x2160">4K</option></select></label>
     <label>fps <select id="camfps"><option>30</option><option selected>60</option></select></label>
     <label><input id="tryHarder" type="checkbox" checked> tryHarder</label>
+    <label>frame copy <select id="copyPath"><option value="videoframe" selected>VideoFrame</option><option value="canvas">canvas</option></select></label>
     <button id="startBtn">Start camera</button>
     <button id="resetBtn">Reset stats</button>
   </div>
@@ -76,7 +77,11 @@
   function onResult(wi, e) {
     busy[wi] = false;
     var m = e.data;
-    if (m.error) { $("err").textContent = m.error; return; }
+    if (m.error) {
+      $("err").textContent = m.error;
+      if (m.copyFailed && $("copyPath").value === "videoframe") { $("copyPath").value = "canvas"; $("err").textContent += " (switched to canvas copy)"; }
+      return;
+    }
     S.decFrames++; S.decMs += m.readMs + m.decodeMs; S.readMs += m.readMs; S.zxMs += m.decodeMs; S.found += m.found;
     var frames = {};
     m.payloads.forEach(function (buf) {
@@ -106,6 +111,18 @@
     var wi = busy.indexOf(false);
     if (wi >= 0 && video.videoWidth) {
       busy[wi] = true;
+      if ($("copyPath").value === "videoframe" && window.VideoFrame) {
+        try {
+          var vf = new VideoFrame(video);
+          workers[wi].postMessage({ frame: vf, id: S.camFrames, tryHarder: $("tryHarder").checked }, [vf]);
+        } catch (err) {
+          busy[wi] = false;
+          $("copyPath").value = "canvas";
+          $("err").textContent = "VideoFrame unavailable (" + err.message + "), using canvas copy";
+        }
+        schedule();
+        return;
+      }
       createImageBitmap(video).then(function (bitmap) {
         workers[wi].postMessage({ bitmap: bitmap, id: S.camFrames, tryHarder: $("tryHarder").checked }, [bitmap]);
       }, function () { busy[wi] = false; });
@@ -144,7 +161,7 @@
       zxingMs: S.decFrames ? +(S.zxMs / S.decFrames).toFixed(1) : null,
       symbolsLocatedPerFrame: S.decFrames ? +(S.found / S.decFrames).toFixed(2) : null,
       codesPerDecodedFrame: S.decFrames ? +(S.codes / S.decFrames).toFixed(2) : null,
-      tornFrames: S.mixed, uniqueCodes: S.unique, workers: NW, tryHarder: $("tryHarder").checked,
+      tornFrames: S.mixed, uniqueCodes: S.unique, workers: NW, tryHarder: $("tryHarder").checked, copyPath: $("copyPath").value,
       userAgent: navigator.userAgent,
     };
   }

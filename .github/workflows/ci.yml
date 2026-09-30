@@ -34,6 +34,8 @@ jobs:
         run: '"$(uv python find ${{ matrix.python }})" -m unittest discover -s py/tests -v'
       - name: Round-trip tests (Node and Python CLIs)
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/roundtrip.js
+      - name: Protocol v3 tests (JS codec, Python-encoded codes)
+        run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/v3.js
       - name: Versions match
         run: '"$(uv python find ${{ matrix.python }})" scripts/version.py'
 
@@ -48,7 +50,8 @@ jobs:
       - name: Protocol test vectors still match the reference codec
         run: |
           node protocol/test-vectors/generate.js
-          git diff --exit-code protocol/test-vectors/ || { echo "::error::js/fountain.js no longer matches protocol/test-vectors/v2.json. A protocol change needs a new version, not new v2 vectors."; exit 1; }
+          node protocol/test-vectors/generate_v3.js
+          git diff --exit-code protocol/test-vectors/ || { echo "::error::The reference codecs (js/fountain.js, js/qbeam3.js) no longer match protocol/test-vectors/. Regenerate only for a deliberate, documented protocol change."; exit 1; }
       - name: Rebuild web/dist/decoder.html
         run: python3 web/build.py
       - name: Fail if the committed copy is stale

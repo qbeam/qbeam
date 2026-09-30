@@ -12,9 +12,9 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** P0.13 speed spike done: 128 KB/s avg / 149 best in Chrome on Android (bench/RESULTS.md) (2026-10-01)
-- **Next up:** P0.12 measure cimbar + Decimen on the same phone/screen; P0.5 protocol v3 (binary, one fountain symbol per code, 3x2 grid) + P0.5a sparse fountain code; P0.6 encryption decision. P0.2 still needs a code of conduct
-- **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
+- **Last done:** protocol v3 draft + reference codec (js/qbeam3.js), Python encoder, vectors and tests (2026-10-01)
+- **Next up:** P0.6 encryption decision; then build v3 into the senders (Python CLI page + terminal, npm) and the web receiver using the spike recipe (P1/P2). P0.12 competitor baseline deferred by user. P0.2 still needs a code of conduct
+- **Blockers / open decisions:** encryption approach (P0.6); paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
 
@@ -40,7 +40,7 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 Empty folders with a README stub for later phases: `protocol/`, `android/`, `ios/`, `go/`, `bench/`, `docs/`.
 
-Frame format (v2): `Q2H` header `id|K|len|sha|filenameB64|encoding`, `Q2D` data `id|K|len|esi|base64block`,
+Protocol: v3 is specified (protocol/SPEC.md, js/qbeam3.js, py/src/qbeam/protocol_v3.py) but no sender/receiver uses it yet. Frame format today (v2): `Q2H` header `id|K|len|sha|filenameB64|encoding`, `Q2D` data `id|K|len|esi|base64block`,
 header every 10th frame. Defaults: 300-byte blocks, ECC M, 350 ms/frame.
 
 ## Tests and releases

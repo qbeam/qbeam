@@ -4,12 +4,123 @@ This document is normative for every qbeam sender and receiver (Python, JS, Kotl
 Test vectors in [`test-vectors/`](test-vectors/) are part of the spec: an implementation is conforming only
 if it reproduces them exactly.
 
-- **v2** (below) is what qbeam 0.0.x sends today. Frame prefix `Q2`.
-- **v3** will replace it with binary frames and a sparse fountain code (PLAN P0.5, P0.5a). Not yet specified.
+- **v3** (below) replaces v2: binary codes, one fountain symbol per QR code, a segmented fountain code for large
+  files, and the file metadata inside the payload. Draft: not yet implemented by any sender.
+- **v2** is what qbeam 0.0.x sends today. Frame prefix `Q2`.
 - **v1** (prefix `Q1`) predates the fountain code. Receivers must recognise it only to tell the user to regenerate
   the sender page.
 
 The key words MUST, SHOULD and MAY are used as in RFC 2119.
+
+---
+
+## v3 (draft)
+
+### 1. Overview
+
+Every QR code is self-contained: it carries a small header, one fountain symbol and a checksum. How many codes a
+sender shows at once, and how fast, is the sender's business; receivers treat codes independently and never need
+to know the grid.
+
+```
+file ──(optional gzip)──▶ container ──split──▶ K blocks in S segments ──fountain──▶ symbols 0,1,2,…
+                           filename, SHA-256                                          │
+                                                                                      ▼
+                                             QR code = header (18 B) + symbol (T B) + CRC-32 (4 B)
+```
+
+All integers are big-endian and unsigned.
+
+### 2. Code format
+
+| Offset | Size | Field | Value |
+| --- | --- | --- | --- |
+| 0 | 2 | magic | `0xB3 0x71` (not ASCII, so never confused with v1/v2 text frames) |
+| 2 | 1 | version | `3` |
+| 3 | 1 | flags | bits 0–3: must-understand; bits 4–7: may be ignored. None defined yet: senders MUST send 0 |
+| 4 | 4 | session | random per transfer |
+| 8 | 4 | L | payload (container) length in bytes |
+| 12 | 2 | T | symbol size in bytes, ≥ 1 |
+| 14 | 4 | ESI | encoding symbol id |
+| 18 | T | symbol | the fountain symbol |
+| 18 + T | 4 | CRC | CRC-32 (IEEE 802.3, as zlib's `crc32`) of bytes `0 … 18+T−1` |
+
+A code is therefore exactly `T + 22` bytes. It is carried in a single byte-mode QR segment. Senders SHOULD use
+error-correction level L and a fixed mask pattern (mask evaluation is optional in ISO 18004 and costs ~17× the
+encoding time); receivers MUST accept any level and mask.
+
+**Receiver checks, in order.** A code whose first two bytes aren't the magic is not qbeam v3 and MUST be ignored
+(it may be v1/v2, see those sections). Then:
+
+1. `version ≠ 3`: ignore, and SHOULD tell the user the sender is newer or older than this receiver.
+2. Length `≠ T + 22`: ignore.
+3. CRC mismatch: ignore.
+4. Any must-understand flag bit set that this receiver doesn't implement: ignore, and SHOULD tell the user.
+
+**Session identity** is the tuple (`session`, `L`, `T`, must-understand flag bits). Session adoption follows the v2
+rule (§v2.6): a code from a different session replaces the current one only if the current one is idle (none,
+finished, or no symbols accepted yet).
+
+### 3. Segments
+
+`K = max(1, ceil(L / T))` source blocks. Block *i* is payload bytes `[i·T, (i+1)·T)`, zero-padded to T bytes.
+
+The blocks are split into `S = ceil(K / KMAX)` segments, **KMAX = 2048**, as evenly as possible: with
+`base = floor(K / S)` and `extra = K mod S`, segment *s* (0-based) has `base + 1` blocks if `s < extra`, else
+`base`, and segments are contiguous in block order. Each segment is an independent code: symbols of one segment
+never involve blocks of another.
+
+### 4. Symbols
+
+Each ESI belongs to exactly one segment:
+
+- **ESI < K (source symbol):** the segment containing block ESI; the symbol is that block.
+- **ESI ≥ K (repair symbol):** with `r = ESI − K`, segment `s = r mod S` and repair index `j = floor(r / S)`.
+  Repair symbols therefore rotate through the segments.
+
+A repair symbol is the XOR of the blocks of segment *s* selected by its coefficient vector, an `n`-bit vector where
+`n` is the segment's block count:
+
+1. `W = ceil(n / 32)`.
+2. Seed mulberry32 (§v2.4, same generator) with
+   `seed = imul(j + 1, 0x9E3779B1) XOR imul(s + 1, 0x85EBCA6B) XOR n`, as a 32-bit unsigned value.
+3. Draw `W` 32-bit words; bit *b* of word *w* (least significant first) selects the segment's block `32·w + b`.
+4. If `n mod 32 ≠ 0`, clear the bits of the last word at positions ≥ `n mod 32`.
+5. If every word is zero, select only block `j mod n`.
+
+Senders MUST emit ESIs 0, 1, 2, … in increasing order without repeating, so every source block goes out once,
+then repair symbols forever. Receivers MUST accept symbols in any order and ignore duplicate ESIs. A segment
+decodes once its accepted symbols have rank n over GF(2); in practice about n + 2 symbols. With 20% random loss,
+the whole payload needed 0.5% more symbols than K for a 10 MB file and 2.2% for 40 MB
+(`bench/protocol/fountain_v3.js`).
+
+### 5. Container (the payload)
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| 0 | 1 | container version, `1` |
+| 1 | 1 | encoding: `0` = save the data as-is; `1` = gzip, the receiver MUST gunzip before saving |
+| 2 | 2 | filename length *n* in bytes |
+| 4 | n | filename, UTF-8 |
+| 4 + n | 32 | SHA-256 of the bytes the receiver saves (after gunzip for encoding 1) |
+| 36 + n | rest | data |
+
+The receiver MUST verify the SHA-256 before saving. On mismatch it MUST NOT save and SHOULD restart the session.
+Filenames are untrusted: receivers MUST strip path components and reject `.` and `..`.
+
+Senders choose compression; the container says only how to undo it. xz archives are sent with encoding 0 and a
+`.xz` filename, as in v2.
+
+### 6. Choosing T
+
+T should fill the QR code: `T = (byte capacity of the chosen version at level L) − 22`. The speed spike's best
+configuration (3×2 grid of version 30, level L) gives `T = 1732 − 22 = 1710`. zxing-cpp's encoder adds an ECI
+marker for binary data that costs a few bytes; senders using it must leave room for that.
+
+### 7. Not yet decided
+
+- **Encryption** (PLAN P0.6): will use a must-understand flag bit, so older receivers refuse encrypted codes
+  instead of saving ciphertext.
 
 ---
 

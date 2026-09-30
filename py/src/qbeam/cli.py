@@ -138,10 +138,10 @@ def build_bytes(raw: bytes, filename: str, label: str, chunk_size: int, out_path
         "method": method,
     }
 
-    shell = asset("sender_shell.html").read_text()
-    qrcodegen = asset("qrcodegen.js").read_text()
-    fountain = asset("fountain.js").read_text()
-    app = asset("sender_app.js").read_text()
+    shell = asset("sender_shell.html").read_text(encoding="utf-8")
+    qrcodegen = asset("qrcodegen.js").read_text(encoding="utf-8")
+    fountain = asset("fountain.js").read_text(encoding="utf-8")
+    app = asset("sender_app.js").read_text(encoding="utf-8")
 
     out = (
         shell
@@ -153,7 +153,7 @@ def build_bytes(raw: bytes, filename: str, label: str, chunk_size: int, out_path
         .replace("/*__APP__*/", app)
     )
 
-    out_path.write_text(out)
+    out_path.write_text(out, encoding="utf-8")
 
     print(f"Input:       {label} ({len(raw)} bytes)")
     print(f"Compressed:  {len(compressed)} bytes ({method}, {100 * len(compressed) / max(1, len(raw)):.0f}% of original)")
@@ -179,6 +179,10 @@ def receive(no_open: bool) -> None:
 
 
 def main(argv=None) -> None:
+    # Filenames can be any Unicode; don't crash printing them to a cp1252 console or a pipe.
+    for stream in (sys.stdout, sys.stderr):
+        if hasattr(stream, "reconfigure"):
+            stream.reconfigure(errors="replace")
     parser = argparse.ArgumentParser(prog="qbeam", description=__doc__,
                                      formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument("--version", action="version", version=f"qbeam {__version__}")

@@ -2,16 +2,39 @@
   "name": "qbeam",
   "version": "0.0.1",
   "description": "Move files from a locked-down machine to your phone over animated QR codes. No network, no admin rights.",
-  "keywords": ["qr", "qr-code", "file-transfer", "offline", "air-gap", "fountain-code", "cli"],
+  "keywords": [
+    "qr",
+    "qr-code",
+    "file-transfer",
+    "offline",
+    "air-gap",
+    "fountain-code",
+    "cli"
+  ],
   "homepage": "https://qbeam.dev",
-  "repository": { "type": "git", "url": "git+https://github.com/qbeam/qbeam.git", "directory": "js" },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/qbeam/qbeam.git",
+    "directory": "js"
+  },
   "bugs": "https://github.com/qbeam/qbeam/issues",
   "license": "Apache-2.0",
-  "bin": { "qbeam": "bin/qbeam.js" },
+  "bin": {
+    "qbeam": "bin/qbeam.js"
+  },
   "main": "fountain.js",
-  "files": ["bin/", "assets/", "fountain.js", "LICENSE", "THIRD_PARTY_NOTICES.md"],
-  "engines": { "node": ">=18" },
+  "files": [
+    "bin/",
+    "assets/",
+    "fountain.js",
+    "LICENSE",
+    "THIRD_PARTY_NOTICES.md"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
   "scripts": {
-    "prepack": "node scripts/sync-assets.js"
+    "prepack": "node scripts/sync-assets.js",
+    "test": "node test/roundtrip.js"
   }
 }

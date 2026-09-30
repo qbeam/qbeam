@@ -60,10 +60,10 @@ Development
 - [ ] P0.6 Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install qbeam[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
 - [ ] P0.12 **Build the benchmark rig first and measure competitors on it:** fixed monitor, 3 Android phones (low/mid/high) + 1 iPhone on a stand; measure cimbar (CameraFileCopy) and Decimen goodput for 1 MB and 10 MB files. Their numbers on our rig become the parity target.
 - [ ] P0.13 **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
-- [ ] P0.7 CI skeleton (GitHub Actions): ubuntu, macos, windows; Python 3.8 → 3.13; Node 18/20/22
+- [x] P0.7 CI skeleton (GitHub Actions): ubuntu, macos, windows; Python 3.8 → 3.13; Node 18/20/22 — `.github/workflows/ci.yml` (Python 3.8/3.12/3.13, Node 22) + `release.yml` (publish on merge when the version is new, trusted publishing)
 
 Testing
-- [ ] P0.8 Port existing behaviour into tests first: fountain round-trip (JS via node), encode.py → decoder round-trip on text frames
+- [x] P0.8 Port existing behaviour into tests first (py/tests/test_cli.py, js/test/roundtrip.js): fountain round-trip (JS via node), encode.py → decoder round-trip on text frames
 - [ ] P0.9 Generate the first test vectors from today's encoder; both codecs must reproduce them byte for byte
 
 Marketing
@@ -252,6 +252,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-09-30 · P0.7 + P0.8 done: CI on 3 OSes, package + no-admin install jobs (uvx/npx), release-on-merge with trusted publishing (docs/RELEASING.md), scripts/version.py keeps versions in sync; tests: 6 Python CLI tests, 6 cross-CLI fountain round-trips. Fixed Windows cp1252 crashes (UTF-8 file I/O, safe console output) · Next: registry setup (user), push
 
 - 2026-09-30 · Commits rewritten to GitHub no-reply author; public repo github.com/qbeam/qbeam created and pushed, topics set. PyPI/npm 0.0.1 artifacts built in py/dist and js/qbeam-0.0.1.tgz · Next: user runs twine upload + npm publish
 

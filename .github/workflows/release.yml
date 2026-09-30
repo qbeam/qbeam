@@ -1,0 +1,106 @@
+name: Release
+
+# Every push to main checks whether the version in py/src/qbeam/__init__.py and js/package.json
+# (kept in sync by scripts/version.py) is already on PyPI and npm. If not, it runs CI, publishes the
+# exact artifacts CI tested, and creates a GitHub release. Pushes that don't change the version publish nothing.
+#
+# Publishing uses trusted publishing (OIDC): no tokens are stored in this repo.
+# One-time setup is described in docs/RELEASING.md.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+permissions:
+  contents: read
+
+jobs:
+  plan:
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      pypi: ${{ steps.check.outputs.pypi }}
+      npm: ${{ steps.check.outputs.npm }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: check
+        name: Is this version already published?
+        run: |
+          version=$(python3 scripts/version.py)
+          echo "version=$version" >> "$GITHUB_OUTPUT"
+          pypi_status=$(curl -s -o /dev/null -w '%{http_code}' "https://pypi.org/pypi/qbeam/$version/json")
+          npm_status=$(curl -s -o /dev/null -w '%{http_code}' "https://registry.npmjs.org/qbeam/$version")
+          echo "pypi=$([ "$pypi_status" = 404 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "npm=$([ "$npm_status" = 404 ] && echo true || echo false)" >> "$GITHUB_OUTPUT"
+          echo "qbeam $version: PyPI HTTP $pypi_status, npm HTTP $npm_status (404 = not yet published)"
+
+  ci:
+    needs: plan
+    if: needs.plan.outputs.pypi == 'true' || needs.plan.outputs.npm == 'true'
+    uses: ./.github/workflows/ci.yml
+
+  publish-pypi:
+    needs: [plan, ci]
+    if: needs.plan.outputs.pypi == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: pypi
+      url: https://pypi.org/project/qbeam/${{ needs.plan.outputs.version }}/
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: python-dist
+          path: dist/
+      - uses: pypa/gh-action-pypi-publish@release/v1
+
+  publish-npm:
+    needs: [plan, ci]
+    if: needs.plan.outputs.npm == 'true'
+    runs-on: ubuntu-latest
+    environment:
+      name: npm
+      url: https://www.npmjs.com/package/qbeam/v/${{ needs.plan.outputs.version }}
+    permissions:
+      id-token: write
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          registry-url: https://registry.npmjs.org
+      - name: Use an npm with trusted publishing support
+        run: npm install -g npm@latest
+      - uses: actions/download-artifact@v4
+        with:
+          name: npm-dist
+          path: dist/
+      - name: Publish
+        run: npm publish dist/qbeam-*.tgz --access public
+
+  github-release:
+    needs: [plan, publish-pypi, publish-npm]
+    if: ${{ !failure() && !cancelled() && (needs.plan.outputs.pypi == 'true' || needs.plan.outputs.npm == 'true') }}
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          path: dist/
+          merge-multiple: true
+      - name: Tag and create the GitHub release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: v${{ needs.plan.outputs.version }}
+        run: |
+          if gh release view "$TAG" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            echo "$TAG already exists"; exit 0
+          fi
+          gh release create "$TAG" dist/* --repo "$GITHUB_REPOSITORY" --target "$GITHUB_SHA" \
+            --title "qbeam $TAG" --generate-notes

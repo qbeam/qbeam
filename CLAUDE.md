@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** qbeam 0.0.1 packaged for PyPI and npm and tested (clean installs, Python 3.8/3.12/3.13 via uvx, npm round-trip decode) (2026-09-30)
-- **Next up:** user publishes qbeam 0.0.1 to PyPI and npm (P0.10); then P0.4 spec v2, P0.8 baseline tests, P0.12 rig, P0.13 speed spike. P0.2 still needs a code of conduct
+- **Last done:** CI (tests on 3 OSes × Python 3.8/3.12/3.13, package build, no-admin install check) and automatic release on merge to main via trusted publishing; Windows UTF-8 fixes (2026-09-30)
+- **Next up:** user sets up PyPI pending publisher + npm first publish and trusted publisher (docs/RELEASING.md), then push; then P0.4 spec v2, P0.12 rig, P0.13 speed spike. P0.2 still needs a code of conduct
 - **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
 
 ## Tracking rules
@@ -42,6 +42,13 @@ Empty folders with a README stub for later phases: `protocol/`, `android/`, `ios
 
 Frame format (v2): `Q2H` header `id|K|len|sha|filenameB64|encoding`, `Q2D` data `id|K|len|esi|base64block`,
 header every 10th frame. Defaults: 300-byte blocks, ECC M, 350 ms/frame.
+
+## Tests and releases
+
+- `python3 -m unittest discover -s py/tests -v` and `node js/test/roundtrip.js` (both from the repo root); CI runs them on every PR.
+- Release = bump with `python3 scripts/version.py X.Y.Z` and merge to main. See docs/RELEASING.md. Never publish by hand after the first npm version.
+- After editing decoder files or `js/fountain.js`, run `python3 web/build.py` and commit `web/dist/decoder.html` (CI checks it).
+- Python file I/O always passes `encoding="utf-8"` (Windows defaults to cp1252).
 
 ## Conventions and constraints
 

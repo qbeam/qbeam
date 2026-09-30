@@ -219,7 +219,9 @@
     var wh = $("res").value.split("x"), want = +wh[0], fps = +$("camfps").value;
     try {
       // Some browsers (Firefox on Android) answer "ideal" with 640x480, so ask with "min" first and step down.
+      // Demand the frame rate first (browsers treat "ideal" fps as a hint and often give 30), then relax.
       var attempts = [
+        { width: { min: want, ideal: want }, height: { ideal: +wh[1] }, frameRate: { min: fps, ideal: fps } },
         { width: { min: want, ideal: want }, height: { ideal: +wh[1] } },
         { width: { min: 1920 }, height: { min: 1080 } },
         { width: { min: 1280 }, height: { min: 720 } },
@@ -228,12 +230,16 @@
       var stream = null, lastErr = null;
       for (var a = 0; a < attempts.length && !stream; a++) {
         var v = Object.assign({ facingMode: { ideal: "environment" }, frameRate: { ideal: fps } }, attempts[a]);
+        if (a > 0 && !attempts[a].frameRate) v.frameRate = { ideal: fps };
         try { stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: v }); }
         catch (e) { lastErr = e; }
       }
       if (!stream) throw lastErr;
       track = stream.getVideoTracks()[0];
       var got = track.getSettings();
+      if (got.frameRate && got.frameRate < fps - 5) {
+        $("err").textContent = "Camera is running at " + Math.round(got.frameRate) + " fps (asked " + fps + "). More light often helps. ";
+      }
       if ((got.width || 0) < 1280 && (got.height || 0) < 1280) {
         $("err").textContent = "Camera is only " + got.width + "x" + got.height + ": too coarse for dense codes. " +
           "Try Chrome, or a smaller grid / lower QR version.";

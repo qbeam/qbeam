@@ -1,0 +1,27 @@
+# Generated sender pages (contain the encoded file)
+*.sender.html
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+.venv/
+venv/
+build/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+
+# Node
+node_modules/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
+
+# Claude Code session metadata
+.claude/.cc-writes/
+qrtool/

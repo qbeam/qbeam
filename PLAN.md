@@ -255,7 +255,7 @@ Newest first. One line per session: date · what changed · next step.
 
 - 2026-09-30 · qbeam 0.0.1 built for PyPI (py/src/qbeam, stdlib only, assets packaged) and npm (js/bin/qbeam.js, single-file send + receive, exports fountain codec). Tested: clean venv install, output matches pre-package encoder, uvx on Python 3.8 and 3.13, npm install from tarball, fountain round-trip with 30–50% frame loss for Node- and Python-made pages. Fixed: Node CLI left the second __TITLE__ unfilled · Next: user publishes to PyPI/npm, push to GitHub
 
-- 2026-09-30 · Initial commit 963936a. P0.1 done: name is qbeam (free on PyPI, npm, .dev, GitHub, Homebrew when checked); placeholders replaced in repo · Next: P0.10 register qbeam.dev + packages (user), P0.4 spec v2
+- 2026-09-30 · Initial commit b71e96f. P0.1 done: name is qbeam (free on PyPI, npm, .dev, GitHub, Homebrew when checked); placeholders replaced in repo · Next: P0.10 register qbeam.dev + packages (user), P0.4 spec v2
 
 - 2026-09-30 · P0.3 done, P0.2 mostly done: git init (main), Apache-2.0, README/SECURITY/THIRD_PARTY_NOTICES, .gitignore; code moved to py/ js/ web/ (vendor, dist), stub READMEs for protocol/ android/ ios/ go/ bench/ docs/. Verified: rebuilt decoder.html byte-identical; sender page identical except session id · Next: P0.1 name, P0.4 spec v2
 - 2026-09-30 · Speed parity with fastest competitor made a hard requirement: added rig + competitor baseline (P0.12), speed spike (P0.13), sparse fountain code (P0.5a, P2.1a), pixel sender default (P1.6), parity gates 2 and 3 · Next: P0.1 pick the name

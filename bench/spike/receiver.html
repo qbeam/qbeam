@@ -39,8 +39,8 @@
     <div class="cell"><b id="camInfo">–</b><span>camera (actual)</span></div>
     <div class="cell"><b id="camFps">–</b><span>camera frames/s</span></div>
     <div class="cell"><b id="decFps">–</b><span>frames decoded/s</span></div>
-    <div class="cell"><b id="decMs">–</b><span>decode ms (read + zxing)</span></div>
-    <div class="cell"><b id="perFrame">–</b><span>codes per decoded frame</span></div>
+    <div class="cell"><b id="decMs">–</b><span>ms per frame: copy + zxing</span></div>
+    <div class="cell"><b id="perFrame">–</b><span>codes per frame: read / located</span></div>
     <div class="cell"><b id="mixed">–</b><span>frames with 2 sender frames (tearing)</span></div>
     <div class="cell"><b id="senderCfg">–</b><span>sender config</span></div>
     <div class="cell"><b id="workers">–</b><span>decode workers</span></div>
@@ -60,7 +60,7 @@
   var S; // stats
 
   function reset() {
-    S = { t0: performance.now(), camFrames: 0, decFrames: 0, decMs: 0, codes: 0, mixed: 0,
+    S = { t0: performance.now(), camFrames: 0, decFrames: 0, decMs: 0, readMs: 0, zxMs: 0, codes: 0, mixed: 0, found: 0,
           seen: new Map(), unique: 0, uniqueBytes: 0, firstAt: 0, minFrame: Infinity, maxFrame: -1,
           window: [], cfg: null };
   }
@@ -77,7 +77,7 @@
     busy[wi] = false;
     var m = e.data;
     if (m.error) { $("err").textContent = m.error; return; }
-    S.decFrames++; S.decMs += m.readMs + m.decodeMs;
+    S.decFrames++; S.decMs += m.readMs + m.decodeMs; S.readMs += m.readMs; S.zxMs += m.decodeMs; S.found += m.found;
     var frames = {};
     m.payloads.forEach(function (buf) {
       var b = new Uint8Array(buf);
@@ -140,6 +140,9 @@
       camera: s.width ? s.width + "x" + s.height + " @" + (s.frameRate ? s.frameRate.toFixed(0) : "?") : null,
       cameraFps: +(S.camFrames / secs).toFixed(1), decodedFps: +(S.decFrames / secs).toFixed(1),
       decodeMs: S.decFrames ? +(S.decMs / S.decFrames).toFixed(1) : null,
+      copyMs: S.decFrames ? +(S.readMs / S.decFrames).toFixed(1) : null,
+      zxingMs: S.decFrames ? +(S.zxMs / S.decFrames).toFixed(1) : null,
+      symbolsLocatedPerFrame: S.decFrames ? +(S.found / S.decFrames).toFixed(2) : null,
       codesPerDecodedFrame: S.decFrames ? +(S.codes / S.decFrames).toFixed(2) : null,
       tornFrames: S.mixed, uniqueCodes: S.unique, workers: NW, tryHarder: $("tryHarder").checked,
       userAgent: navigator.userAgent,
@@ -155,8 +158,8 @@
     $("camInfo").textContent = r.camera || "–";
     $("camFps").textContent = r.cameraFps;
     $("decFps").textContent = r.decodedFps;
-    $("decMs").textContent = r.decodeMs != null ? r.decodeMs : "–";
-    $("perFrame").textContent = r.codesPerDecodedFrame != null ? r.codesPerDecodedFrame : "–";
+    $("decMs").textContent = r.decodeMs != null ? r.copyMs + " + " + r.zxingMs : "–";
+    $("perFrame").textContent = r.codesPerDecodedFrame != null ? r.codesPerDecodedFrame + " / " + r.symbolsLocatedPerFrame : "–";
     $("mixed").textContent = r.tornFrames;
     $("senderCfg").textContent = r.sender || "–";
   }, 500);

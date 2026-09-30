@@ -22,6 +22,7 @@ self.onmessage = async (e) => {
   try {
     results = await readBarcodes(img, {
       formats: ["QRCode"], tryHarder, tryRotate: false, tryInvert: false, tryDownscale: false, maxNumberOfSymbols: 16,
+      returnErrors: true, // also report codes that were located but failed to decode
     });
   } catch (err) {
     self.postMessage({ id, error: String(err) });

@@ -50,4 +50,5 @@ Not run yet. Use `bench/spike/README.md`; paste each receiver "Copy result" JSON
 
 | Date | Phone | Camera | Sender | Offered KB/s | Goodput KB/s | Codes recovered | Torn frames | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-01 | Android (model not recorded) | Chrome 154, 1080x1920 @30 requested, **14.8 fps** delivered | 2x2 v25-L @10 | 49.7 | **10.2** avg, 23.6 best 5 s | 21% (814 codes) | 24 | 0.91 of 4 codes read per decoded frame; decode 162 ms/frame (Mac: ~28); 10.5 frames decoded/s. Camera fell to 15 fps, so a 10 fps sender tears often. Next: 5 fps sender to separate tearing from optics; receiver now splits copy vs zxing time and counts located-but-unreadable codes. |
 | 2026-10-01 | Android 16 (model not recorded) | Firefox 156, **640x480** @30 (asked for 1080p) | 2x2 v30-L @15 | 101.5 | 0.1 | 1 code | 0 | Invalid run: Firefox ignored the `ideal` 1080p request. 1.5 camera px/module vs ~3.3 needed. Decode 80.7 ms/frame. Receiver now requests `min` resolution and warns below 1280 px. |

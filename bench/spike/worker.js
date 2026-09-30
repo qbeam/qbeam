@@ -104,5 +104,5 @@ self.onmessage = async (e) => {
   }
   const t2 = performance.now();
   const payloads = results.filter((r) => r.isValid).map((r) => r.bytes.slice().buffer);
-  self.postMessage({ id, payloads, readMs: t1 - t0, decodeMs: t2 - t1, found: results.length }, payloads);
+  self.postMessage({ id, payloads, readMs: t1 - t0, decodeMs: t2 - t1, found: results.length, w: img.width, h: img.height }, payloads);
 };

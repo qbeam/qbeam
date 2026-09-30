@@ -37,7 +37,7 @@
     <div><span style="color:#999">efficiency</span><div class="big" id="eff">–</div></div></div>
   <div class="grid">
     <div class="cell"><b id="goodAll">–</b><span>goodput since first code</span></div>
-    <div class="cell"><b id="camInfo">–</b><span>camera (actual)</span></div>
+    <div class="cell"><b id="camInfo">–</b><span>frames decoded at (actual)</span></div>
     <div class="cell"><b id="camFps">–</b><span>camera frames/s</span></div>
     <div class="cell"><b id="decFps">–</b><span>frames decoded/s</span></div>
     <div class="cell"><b id="decMs">–</b><span>ms per frame: copy + zxing</span></div>
@@ -85,6 +85,8 @@
       }
       return;
     }
+    S.frameSize = m.w + "x" + m.h;
+    if (Math.max(m.w, m.h) < 1280) $("err").textContent = "Decoding " + S.frameSize + " frames: too coarse for dense codes. Use Chrome (Firefox on Android gives 640x480).";
     S.decFrames++; S.decMs += m.readMs + m.decodeMs; S.readMs += m.readMs; S.zxMs += m.decodeMs; S.found += m.found;
     var frames = {};
     m.payloads.forEach(function (buf) {
@@ -158,6 +160,7 @@
       codeRecovery: spanned ? +(S.unique / spanned).toFixed(3) : null,
       sender: c ? c.cols + "x" + c.rows + " v" + c.ver + "-" + c.ecc + " @" + c.fps + "fps, " + c.bytes + " B/code" : null,
       camera: s.width ? s.width + "x" + s.height + " @" + (s.frameRate ? s.frameRate.toFixed(0) : "?") : null,
+      decodedFrameSize: S.frameSize || null,
       cameraFps: +(S.camFrames / secs).toFixed(1), decodedFps: +(S.decFrames / secs).toFixed(1),
       decodeMs: S.decFrames ? +(S.decMs / S.decFrames).toFixed(1) : null,
       copyMs: S.decFrames ? +(S.readMs / S.decFrames).toFixed(1) : null,
@@ -175,7 +178,7 @@
     $("goodAll").textContent = kb(r.goodputKBs) + " KB/s";
     $("offered").textContent = r.offeredKBs ? kb(r.offeredKBs) + " KB/s" : "–";
     $("eff").textContent = r.codeRecovery != null ? Math.round(r.codeRecovery * 100) + "%" : "–";
-    $("camInfo").textContent = r.camera || "–";
+    $("camInfo").textContent = (r.decodedFrameSize || r.camera || "–") + (r.camera ? " @" + r.camera.split("@")[1] : "");
     $("camFps").textContent = r.cameraFps;
     $("decFps").textContent = r.decodedFps;
     $("decMs").textContent = r.decodeMs != null ? r.copyMs + " + " + r.zxingMs : "–";

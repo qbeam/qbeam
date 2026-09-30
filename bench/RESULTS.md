@@ -50,5 +50,8 @@ Not run yet. Use `bench/spike/README.md`; paste each receiver "Copy result" JSON
 
 | Date | Phone | Camera | Sender | Offered KB/s | Goodput KB/s | Codes recovered | Torn frames | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-01 | same | same | 1x1 v25-L @5 | 6.2 | 6.2 | 100% | 0 | Optics fine for one code. **Frame copy 107 ms vs zxing 41 ms**: browser copy dominates. |
+| 2026-10-01 | same | same | 2x2 v25-L @5 | 24.9 | 19.4 | 77% | 0 | 1.9 read / 2.93 located per capture: codes found but not read. Copy 104 + zxing 40 ms. |
+| 2026-10-01 | Android (model not recorded) | Chrome 154, 1080x1920 **@30** (bright room) | 2x2 v25-L @5, tryHarder | 24.9 | **23.5** | 93% | 0 | 3.33 read / 4.19 located per capture; copy 72.5 + zxing 38 ms; 26.6 decoded fps. tryHarder costs no extra time and lifts recovery 77% → 93%: now default. |
 | 2026-10-01 | Android (model not recorded) | Chrome 154, 1080x1920 @30 requested, **14.8 fps** delivered | 2x2 v25-L @10 | 49.7 | **10.2** avg, 23.6 best 5 s | 21% (814 codes) | 24 | 0.91 of 4 codes read per decoded frame; decode 162 ms/frame (Mac: ~28); 10.5 frames decoded/s. Camera fell to 15 fps, so a 10 fps sender tears often. Next: 5 fps sender to separate tearing from optics; receiver now splits copy vs zxing time and counts located-but-unreadable codes. |
 | 2026-10-01 | Android 16 (model not recorded) | Firefox 156, **640x480** @30 (asked for 1080p) | 2x2 v30-L @15 | 101.5 | 0.1 | 1 code | 0 | Invalid run: Firefox ignored the `ideal` 1080p request. 1.5 camera px/module vs ~3.3 needed. Decode 80.7 ms/frame. Receiver now requests `min` resolution and warns below 1280 px. |

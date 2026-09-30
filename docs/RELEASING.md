@@ -45,7 +45,7 @@ npm attaches trusted publishers to an existing package, so the first version is 
 
 ```bash
 npm login
-npm publish js/qbeam-0.0.1.tgz
+npm publish ./js/qbeam-0.0.1.tgz   # the ./ matters: without it npm treats the path as a GitHub repo
 ```
 
 Then npmjs.com → package `qbeam` → Settings → Trusted Publisher → GitHub Actions:

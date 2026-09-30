@@ -81,7 +81,7 @@ jobs:
           name: npm-dist
           path: dist/
       - name: Publish
-        run: npm publish dist/qbeam-*.tgz --access public
+        run: npm publish ./dist/qbeam-*.tgz --access public
 
   github-release:
     needs: [plan, publish-pypi, publish-npm]

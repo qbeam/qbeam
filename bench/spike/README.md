@@ -14,7 +14,7 @@ python3 bench/spike/serve.py
 It prints three URLs:
 
 - **Sender**, on the Mac: `http://localhost:8000/sender.html`. Pick grid, QR version, ECC and fps, then press Start (fullscreen).
-- **Receiver**, on the phone (same Wi-Fi): `https://<Mac LAN IP>:8443/receiver.html`. Accept the certificate warning
+- **Receiver**, on the phone (same Wi-Fi), in **Chrome** (Firefox on Android gave only 640x480): `https://<Mac LAN IP>:8443/receiver.html`. Accept the certificate warning
   once (self-signed, local only), press Start camera and hold the phone so the grid fills most of the camera view.
 - **Loopback self-test**, on the Mac: `http://localhost:8000/receiver.html?loopback=2x2,30,L,15`. Decodes the sender's
   canvas directly, with no camera. Keep the window visible: hidden tabs throttle the sender to ~2 fps.

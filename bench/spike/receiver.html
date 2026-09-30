@@ -164,12 +164,28 @@
   $("startBtn").addEventListener("click", async function () {
     $("err").textContent = "";
     if (track) track.stop();
-    var wh = $("res").value.split("x");
+    var wh = $("res").value.split("x"), want = +wh[0], fps = +$("camfps").value;
     try {
-      var stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: {
-        facingMode: { ideal: "environment" }, width: { ideal: +wh[0] }, height: { ideal: +wh[1] },
-        frameRate: { ideal: +$("camfps").value } } });
+      // Some browsers (Firefox on Android) answer "ideal" with 640x480, so ask with "min" first and step down.
+      var attempts = [
+        { width: { min: want, ideal: want }, height: { ideal: +wh[1] } },
+        { width: { min: 1920 }, height: { min: 1080 } },
+        { width: { min: 1280 }, height: { min: 720 } },
+        { width: { ideal: want }, height: { ideal: +wh[1] } },
+      ];
+      var stream = null, lastErr = null;
+      for (var a = 0; a < attempts.length && !stream; a++) {
+        var v = Object.assign({ facingMode: { ideal: "environment" }, frameRate: { ideal: fps } }, attempts[a]);
+        try { stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: v }); }
+        catch (e) { lastErr = e; }
+      }
+      if (!stream) throw lastErr;
       track = stream.getVideoTracks()[0];
+      var got = track.getSettings();
+      if ((got.width || 0) < 1280 && (got.height || 0) < 1280) {
+        $("err").textContent = "Camera is only " + got.width + "x" + got.height + ": too coarse for dense codes. " +
+          "Try Chrome, or a smaller grid / lower QR version.";
+      }
       try { await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch (e) { /* not supported */ }
       video.srcObject = stream;
       await video.play();

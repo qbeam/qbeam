@@ -67,7 +67,7 @@ Testing
 - [ ] P0.9 Generate the first test vectors from today's encoder; both codecs must reproduce them byte for byte
 
 Marketing
-- [ ] P0.10 (done: qbeam.dev domain, GitHub org, npm qbeam@0.0.1; remaining: PyPI via first automatic release, social handles, store/trademark checks) Register qbeam.dev, `qbeam` on PyPI and npm (publish a real 0.0.1 of the current encoder rather than an empty placeholder, which PyPI discourages), GitHub org `qbeam`, X / Bluesky / YouTube handles. Not yet checked: Play Store, App Store, trademarks (USPTO/EUIPO), qbeam.com
+- [ ] P0.10 (done: qbeam.dev domain, GitHub org, npm and PyPI qbeam 0.0.1; remaining: social handles, store/trademark checks) Register qbeam.dev, `qbeam` on PyPI and npm (publish a real 0.0.1 of the current encoder rather than an empty placeholder, which PyPI discourages), GitHub org `qbeam`, X / Bluesky / YouTube handles. Not yet checked: Play Store, App Store, trademarks (USPTO/EUIPO), qbeam.com
 - [ ] P0.11 One-page landing site: tagline, 10-second GIF placeholder, "star on GitHub"
 
 ---
@@ -252,6 +252,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · First automatic release: CI green on 18 jobs (3 OSes × Python 3.8/3.12/3.13 + install checks), PyPI qbeam 0.0.1 published via trusted publishing, GitHub release v0.0.1 · Next: P0.4 spec v2, P0.12 benchmark rig, P0.13 speed spike
 
 - 2026-10-01 · qbeam@0.0.1 published to npm by hand (verified with npx); fixed npm publish paths (./) in release.yml and RELEASING.md · Next: user adds npm trusted publisher + PyPI pending publisher, then push to main publishes PyPI 0.0.1
 

@@ -1,0 +1,177 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>qbeam spike sender</title>
+<style>
+  html, body { margin: 0; background: #fff; color: #111; font: 13px -apple-system, system-ui, sans-serif; }
+  #bar { position: fixed; inset: 0 0 auto 0; padding: 8px 12px; background: #eee; display: flex; flex-wrap: wrap; gap: 12px; align-items: center; z-index: 2; }
+  #bar label { display: flex; gap: 4px; align-items: center; }
+  #bar button { padding: 6px 14px; font-size: 14px; }
+  #stats { font-variant-numeric: tabular-nums; color: #333; }
+  body.running #bar { display: none; }
+  #hud { display: none; position: fixed; right: 6px; bottom: 4px; font: 11px ui-monospace, monospace; color: #999; z-index: 2; }
+  body.running #hud { display: block; }
+  canvas { display: block; }
+</style>
+</head>
+<body>
+<div id="bar">
+  <b>qbeam speed spike: sender</b>
+  <label>grid <select id="grid"><option>1x1</option><option>2x1</option><option selected>2x2</option><option>3x2</option><option>4x2</option></select></label>
+  <label>QR version <select id="ver"><option>15</option><option>20</option><option>25</option><option selected>30</option><option>35</option><option>40</option></select></label>
+  <label>ECC <select id="ecc"><option selected>L</option><option>M</option></select></label>
+  <label>fps <input id="fps" type="number" min="1" max="60" value="15" style="width:4em"></label>
+  <label><input id="fixedMask" type="checkbox" checked> fixed mask</label>
+  <button id="start">Start (fullscreen)</button>
+  <span id="stats"></span>
+  <span style="color:#666">Esc or click to stop. Open receiver.html on the phone.</span>
+</div>
+<div id="hud"></div>
+<canvas id="screen"></canvas>
+<script src="qrcode-fastmask.cjs"></script>
+<script>
+(function () {
+  "use strict";
+  // Byte-mode capacity (ISO 18004) for the versions offered.
+  var CAP = { L: { 15: 520, 20: 858, 25: 1273, 30: 1732, 35: 2303, 40: 2953 },
+              M: { 15: 412, 20: 666, 25: 997, 30: 1370, 35: 1809, 40: 2331 } };
+  var HEADER = 11; // "QS" | ver<<1|ecc | cols | rows | fps | frame u32 | index
+
+  var $ = function (id) { return document.getElementById(id); };
+  var screen = $("screen"), ctx = screen.getContext("2d"), hud = $("hud");
+  var back = document.createElement("canvas"), bctx = back.getContext("2d"); // next frame, drawn off-screen
+  var cfg, running = false, frameNo = 0, lastSwitch = 0, shown = 0, t0 = 0, genMs = 0, genCount = 0;
+  var tiles = [];
+
+  function readCfg() {
+    var g = $("grid").value.split("x");
+    var c = { cols: +g[0], rows: +g[1], ver: +$("ver").value, ecc: $("ecc").value,
+              fps: Math.max(1, Math.min(60, +$("fps").value || 15)), fixedMask: $("fixedMask").checked };
+    c.count = c.cols * c.rows;
+    c.bytes = CAP[c.ecc][c.ver];
+    c.offeredKBs = c.count * c.bytes * c.fps / 1024;
+    return c;
+  }
+
+  function showPlan() {
+    var c = readCfg();
+    $("stats").textContent = c.count + " codes x " + c.bytes + " B = " + (c.count * c.bytes / 1024).toFixed(1) +
+      " KB/frame -> offered " + c.offeredKBs.toFixed(0) + " KB/s at " + c.fps + " fps";
+  }
+  ["grid", "ver", "ecc", "fps", "fixedMask"].forEach(function (id) { $(id).addEventListener("input", showPlan); });
+  showPlan();
+
+  function layout() {
+    var dpr = window.devicePixelRatio || 1;
+    screen.width = back.width = Math.floor(window.innerWidth * dpr);
+    screen.height = back.height = Math.floor(window.innerHeight * dpr);
+    screen.style.width = window.innerWidth + "px";
+    screen.style.height = window.innerHeight + "px";
+  }
+
+  function payload(index) {
+    var b = new Uint8Array(cfg.bytes);
+    crypto.getRandomValues(b.subarray(HEADER));
+    b[0] = 0x51; b[1] = 0x53;
+    b[2] = (cfg.ver << 1) | (cfg.ecc === "M" ? 1 : 0);
+    b[3] = cfg.cols; b[4] = cfg.rows; b[5] = cfg.fps;
+    b[6] = frameNo >>> 24; b[7] = (frameNo >>> 16) & 255; b[8] = (frameNo >>> 8) & 255; b[9] = frameNo & 255;
+    b[10] = index;
+    return b;
+  }
+
+  // Renders frame `frameNo` into the back buffer: each code at 1 px/module, then scaled up with no smoothing.
+  function buildNext() {
+    var t = performance.now();
+    var W = back.width, H = back.height;
+    bctx.fillStyle = "#fff";
+    bctx.fillRect(0, 0, W, H);
+    bctx.imageSmoothingEnabled = false;
+    var n = 0, cell = 0, px = 0, x0 = 0, y0 = 0;
+    for (var i = 0; i < cfg.count; i++) {
+      var qr = qrcode(cfg.ver, cfg.ecc);
+      if (cfg.fixedMask) qr.setMask(2);
+      var bytes = payload(i), s = "";
+      for (var k = 0; k < bytes.length; k++) s += String.fromCharCode(bytes[k]);
+      qr.addData(s, "Byte");
+      qr.make();
+      if (!n) {
+        n = qr.getModuleCount(); cell = n + 8;
+        px = Math.floor(Math.min(W / (cfg.cols * cell), H / (cfg.rows * cell)));
+        x0 = Math.floor((W - cfg.cols * cell * px) / 2); y0 = Math.floor((H - cfg.rows * cell * px) / 2);
+        cfg.pxPerModule = px;
+      }
+      var tile = tiles[i];
+      if (!tile || tile.width !== n) {
+        tile = tiles[i] = document.createElement("canvas");
+        tile.width = tile.height = n;
+        tile.img = tile.getContext("2d").createImageData(n, n);
+      }
+      var d = tile.img.data;
+      for (var r = 0; r < n; r++) for (var c = 0; c < n; c++) {
+        var v = qr.isDark(r, c) ? 0 : 255, o = 4 * (r * n + c);
+        d[o] = d[o + 1] = d[o + 2] = v; d[o + 3] = 255;
+      }
+      tile.getContext("2d").putImageData(tile.img, 0, 0);
+      bctx.drawImage(tile, x0 + (i % cfg.cols) * cell * px + 4 * px, y0 + Math.floor(i / cfg.cols) * cell * px + 4 * px, n * px, n * px);
+    }
+    genMs += performance.now() - t; genCount++;
+  }
+
+  function tick(now) {
+    if (!running) return;
+    if (now - lastSwitch >= 1000 / cfg.fps - 4) { // switch on the vsync nearest the target time
+      ctx.drawImage(back, 0, 0);
+      lastSwitch = now; shown++;
+      frameNo++;
+      buildNext();
+      var secs = (now - t0) / 1000;
+      if (shown % Math.max(1, cfg.fps) === 0) {
+        hud.textContent = cfg.cols + "x" + cfg.rows + " v" + cfg.ver + "-" + cfg.ecc + "  " + cfg.pxPerModule + " px/module  " +
+          (shown / secs).toFixed(1) + " fps shown  build " + (genMs / genCount).toFixed(1) + " ms  offered " +
+          (cfg.count * cfg.bytes * shown / secs / 1024).toFixed(0) + " KB/s";
+      }
+    }
+    requestAnimationFrame(tick);
+  }
+
+  function start() {
+    cfg = readCfg();
+    document.body.classList.add("running");
+    var go = function () {
+      layout();
+      frameNo = 0; shown = 0; genMs = 0; genCount = 0;
+      buildNext();
+      running = true; t0 = performance.now(); lastSwitch = t0 - 1000;
+      requestAnimationFrame(tick);
+    };
+    if (document.documentElement.requestFullscreen) {
+      document.documentElement.requestFullscreen().then(function () { setTimeout(go, 300); }, go);
+    } else go();
+  }
+
+  function stop() {
+    if (!running) return;
+    running = false;
+    document.body.classList.remove("running");
+    if (document.fullscreenElement) document.exitFullscreen();
+    ctx.clearRect(0, 0, screen.width, screen.height);
+  }
+
+  $("start").addEventListener("click", start);
+  screen.addEventListener("click", stop);
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape") stop(); });
+  document.addEventListener("fullscreenchange", function () { if (!document.fullscreenElement && running && !autoMode) stop(); });
+
+  // ?grid=2x2&ver=30&ecc=L&fps=15&auto=1 presets the controls; auto starts immediately (used by the loopback test).
+  var q = new URLSearchParams(location.search), autoMode = q.get("auto") === "1";
+  ["grid", "ver", "ecc", "fps"].forEach(function (k) { if (q.get(k)) $(k).value = q.get(k); });
+  showPlan();
+  if (autoMode) start();
+  window.qbeamSender = { canvas: screen };
+})();
+</script>
+</body>
+</html>

@@ -54,17 +54,17 @@ Development
   bench/      benchmark harness + results
   docs/       user docs / site
   ```
-- [ ] P0.4 Write `protocol/SPEC.md` v2 describing today's `Q2H`/`Q2D` text frames exactly (the baseline)
+- [x] P0.4 Write `protocol/SPEC.md` v2 describing today's `Q2H`/`Q2D` text frames exactly (the baseline)
 - [ ] P0.5 Draft protocol v3 (binary frames): magic + version byte, session id, K, length, block size, ESI, flags; header frame with SHA-256, filename, encoding (gz / raw / tar.gz / tar.xz), optional encryption params. Frame-level CRC32. Designed for speed from day one: binary payloads up to QR v40-L (2,953 B), multiple codes per displayed frame, and a sparse fountain code (below).
 - [ ] P0.5a Choose the sparse fountain code: RaptorQ (RFC 6330) vs. Wirehair vs. a tuned LT code. The current dense GF(2) code decodes in O(K²) and is too slow for multi-MB files at high block rates. Check licences of existing implementations (Wirehair BSD; libcimbar — confirm) and whether a WASM build is practical.
 - [ ] P0.6 Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install qbeam[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
 - [ ] P0.12 **Build the benchmark rig first and measure competitors on it:** fixed monitor, 3 Android phones (low/mid/high) + 1 iPhone on a stand; measure cimbar (CameraFileCopy) and Decimen goodput for 1 MB and 10 MB files. Their numbers on our rig become the parity target.
-- [ ] P0.13 **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
+- [ ] P0.13 (in progress: offline benchmarks + camera prototype done, see bench/RESULTS.md; waiting on phone camera runs) **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
 - [x] P0.7 CI skeleton (GitHub Actions): ubuntu, macos, windows; Python 3.8 → 3.13; Node 18/20/22 — `.github/workflows/ci.yml` (Python 3.8/3.12/3.13, Node 22) + `release.yml` (publish on merge when the version is new, trusted publishing)
 
 Testing
 - [x] P0.8 Port existing behaviour into tests first (py/tests/test_cli.py, js/test/roundtrip.js): fountain round-trip (JS via node), encode.py → decoder round-trip on text frames
-- [ ] P0.9 Generate the first test vectors from today's encoder; both codecs must reproduce them byte for byte
+- [x] P0.9 Generate the first test vectors (protocol/test-vectors/v2.json; JS reference + spec-only Python implementation agree; CI guards drift) from today's encoder; both codecs must reproduce them byte for byte
 
 Marketing
 - [ ] P0.10 (done: qbeam.dev domain, GitHub org, npm and PyPI qbeam 0.0.1; remaining: social handles, store/trademark checks) Register qbeam.dev, `qbeam` on PyPI and npm (publish a real 0.0.1 of the current encoder rather than an empty placeholder, which PyPI discourages), GitHub org `qbeam`, X / Bluesky / YouTube handles. Not yet checked: Play Store, App Store, trademarks (USPTO/EUIPO), qbeam.com
@@ -114,7 +114,8 @@ Speed budget (on paper, to be proven on the rig): 4 codes × 2,953 B × 15 fps �
 Development
 - [ ] P2.1 Implement protocol v3 binary frames in Python + JS encoders (QR byte mode, no base64)
 - [ ] P2.1a Implement the sparse fountain code chosen in P0.5a in JS/WASM (sender) and for all decoders; keep the dense code only for tiny files if it helps
-- [ ] P2.2 Large blocks up to QR v40-L (2,953 B), ECC level L; block size matched to the QR version per preset
+- [ ] P2.2 Large blocks up to QR v40-L (2,953 B), ECC level L; block size matched to the QR version per preset. Spike: density is capped by camera pixels (≥ ~3.3 px/module), so at 1080p prefer more mid-size codes (v25–v30) over fewer v40s
+- [ ] P2.2a Fixed QR mask in every sender (spike: 18 ms → 1.1 ms per code, no decode loss)
 - [ ] P2.3 Speed presets `--speed safe|fast|max` (frame rate 10–30 fps, code size, grid) — no feedback channel, so presets + receiver hint; `max` is the default on a pixel display
 - [ ] P2.3a Sender render loop: pre-generate frames ahead in a Worker, draw to canvas with `requestAnimationFrame`, frame changes locked to display refresh (no tearing/half-drawn frames)
 - [ ] P2.4 Multi-code frames: 2×2 (and 3×2 on large screens) grid of codes per frame; terminal stays single-code
@@ -252,6 +253,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · P0.4 + P0.9 done (SPEC v2, vectors, spec-only Python check). P0.13 started: offline benchmarks show decode is cheap (7–12 ms/1080p frame), camera pixels cap density (~10 KB/frame at 1080p), fixed QR mask makes encoding 17x faster; 3x2 v30-L @15 fps offers 152 KB/s on paper. Camera sender/receiver prototype in bench/spike, verified by loopback · Next: user runs camera tests (bench/spike/README.md)
 
 - 2026-10-01 · First automatic release: CI green on 18 jobs (3 OSes × Python 3.8/3.12/3.13 + install checks), PyPI qbeam 0.0.1 published via trusted publishing, GitHub release v0.0.1 · Next: P0.4 spec v2, P0.12 benchmark rig, P0.13 speed spike
 

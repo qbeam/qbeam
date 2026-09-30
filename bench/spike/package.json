@@ -1,0 +1,9 @@
+{
+  "name": "qbeam-speed-spike",
+  "private": true,
+  "description": "PLAN P0.13: can plain QR reach competitor speed? Throwaway prototype.",
+  "type": "module",
+  "dependencies": {
+    "zxing-wasm": "3.1.4"
+  }
+}

@@ -38,3 +38,8 @@ js/assets/
 js/LICENSE
 js/THIRD_PARTY_NOTICES.md
 *.tgz
+
+# Speed spike
+bench/spike/node_modules/
+bench/spike/.cert/
+.claude/launch.json

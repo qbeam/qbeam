@@ -1,0 +1,215 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>qbeam spike receiver</title>
+<style>
+  html, body { margin: 0; background: #111; color: #eee; font: 14px -apple-system, system-ui, sans-serif; }
+  .wrap { max-width: 720px; margin: 0 auto; padding: 12px; }
+  video { width: 100%; max-height: 40vh; object-fit: contain; background: #000; border-radius: 6px; display: block; }
+  .row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 10px 0; }
+  button, select { padding: 8px 12px; font-size: 14px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; }
+  .big { font-size: 34px; font-weight: 600; font-variant-numeric: tabular-nums; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 8px; }
+  .cell { background: #1c1c1c; border-radius: 6px; padding: 8px; }
+  .cell b { display: block; font-size: 18px; font-variant-numeric: tabular-nums; }
+  .cell span { color: #999; font-size: 12px; }
+  #err { color: #f88; }
+  pre { white-space: pre-wrap; font-size: 11px; background: #1c1c1c; padding: 8px; border-radius: 6px; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <b>qbeam speed spike: receiver</b>
+  <div class="row">
+    <label>camera <select id="res"><option value="1280x720">720p</option><option value="1920x1080" selected>1080p</option><option value="3840x2160">4K</option></select></label>
+    <label>fps <select id="camfps"><option>30</option><option selected>60</option></select></label>
+    <label><input id="tryHarder" type="checkbox"> tryHarder</label>
+    <button id="startBtn">Start camera</button>
+    <button id="resetBtn">Reset stats</button>
+  </div>
+  <video id="video" playsinline muted autoplay></video>
+  <div id="err"></div>
+  <div class="row"><div><span style="color:#999">goodput, last 5 s</span><div class="big" id="good">–</div></div>
+    <div><span style="color:#999">offered by sender</span><div class="big" id="offered">–</div></div>
+    <div><span style="color:#999">efficiency</span><div class="big" id="eff">–</div></div></div>
+  <div class="grid">
+    <div class="cell"><b id="goodAll">–</b><span>goodput since first code</span></div>
+    <div class="cell"><b id="camInfo">–</b><span>camera (actual)</span></div>
+    <div class="cell"><b id="camFps">–</b><span>camera frames/s</span></div>
+    <div class="cell"><b id="decFps">–</b><span>frames decoded/s</span></div>
+    <div class="cell"><b id="decMs">–</b><span>decode ms (read + zxing)</span></div>
+    <div class="cell"><b id="perFrame">–</b><span>codes per decoded frame</span></div>
+    <div class="cell"><b id="mixed">–</b><span>frames with 2 sender frames (tearing)</span></div>
+    <div class="cell"><b id="senderCfg">–</b><span>sender config</span></div>
+    <div class="cell"><b id="workers">–</b><span>decode workers</span></div>
+  </div>
+  <div class="row"><button id="copyBtn">Copy result</button></div>
+  <pre id="result"></pre>
+</div>
+<script>
+(function () {
+  "use strict";
+  var CAP = { L: { 15: 520, 20: 858, 25: 1273, 30: 1732, 35: 2303, 40: 2953 },
+              M: { 15: 412, 20: 666, 25: 997, 30: 1370, 35: 1809, 40: 2331 } };
+  var $ = function (id) { return document.getElementById(id); };
+  var video = $("video");
+  var NW = Math.max(1, Math.min(4, (navigator.hardwareConcurrency || 4) - 1));
+  var workers = [], busy = [], track = null;
+  var S; // stats
+
+  function reset() {
+    S = { t0: performance.now(), camFrames: 0, decFrames: 0, decMs: 0, codes: 0, mixed: 0,
+          seen: new Map(), unique: 0, uniqueBytes: 0, firstAt: 0, minFrame: Infinity, maxFrame: -1,
+          window: [], cfg: null };
+  }
+  reset();
+
+  for (var i = 0; i < NW; i++) {
+    var w = new Worker("worker.js", { type: "module" });
+    w.onmessage = onResult.bind(null, i);
+    workers.push(w); busy.push(false);
+  }
+  $("workers").textContent = NW + " (" + (navigator.hardwareConcurrency || "?") + " cores)";
+
+  function onResult(wi, e) {
+    busy[wi] = false;
+    var m = e.data;
+    if (m.error) { $("err").textContent = m.error; return; }
+    S.decFrames++; S.decMs += m.readMs + m.decodeMs;
+    var frames = {};
+    m.payloads.forEach(function (buf) {
+      var b = new Uint8Array(buf);
+      if (b.length < 11 || b[0] !== 0x51 || b[1] !== 0x53) return;
+      S.codes++;
+      var ver = b[2] >> 1, ecc = b[2] & 1 ? "M" : "L", cols = b[3], rows = b[4], fps = b[5];
+      var frame = ((b[6] << 24) | (b[7] << 16) | (b[8] << 8) | b[9]) >>> 0, idx = b[10];
+      S.cfg = { ver: ver, ecc: ecc, cols: cols, rows: rows, fps: fps, count: cols * rows, bytes: b.length };
+      frames[frame] = true;
+      var mask = S.seen.get(frame) || 0, bit = 1 << idx;
+      if (!(mask & bit)) {
+        S.seen.set(frame, mask | bit);
+        S.unique++; S.uniqueBytes += b.length;
+        var now = performance.now();
+        if (!S.firstAt) S.firstAt = now;
+        S.window.push([now, b.length]);
+        if (frame < S.minFrame) S.minFrame = frame;
+        if (frame > S.maxFrame) S.maxFrame = frame;
+      }
+    });
+    if (Object.keys(frames).length > 1) S.mixed++;
+  }
+
+  function onFrame() {
+    S.camFrames++;
+    var wi = busy.indexOf(false);
+    if (wi >= 0 && video.videoWidth) {
+      busy[wi] = true;
+      createImageBitmap(video).then(function (bitmap) {
+        workers[wi].postMessage({ bitmap: bitmap, id: S.camFrames, tryHarder: $("tryHarder").checked }, [bitmap]);
+      }, function () { busy[wi] = false; });
+    }
+    schedule();
+  }
+
+  var lastTime = -1;
+  function schedule() {
+    if (video.requestVideoFrameCallback) video.requestVideoFrameCallback(onFrame);
+    else requestAnimationFrame(function () {
+      if (video.currentTime !== lastTime) { lastTime = video.currentTime; onFrame(); } else schedule();
+    });
+  }
+
+  function kb(x) { return x >= 100 ? x.toFixed(0) : x.toFixed(1); }
+
+  function summary() {
+    var now = performance.now(), secs = (now - S.t0) / 1000;
+    while (S.window.length && now - S.window[0][0] > 5000) S.window.shift();
+    var winBytes = S.window.reduce(function (a, w) { return a + w[1]; }, 0);
+    var span = S.window.length ? Math.min(5, (now - Math.max(S.window[0][0], now - 5000)) / 1000) : 0;
+    var good5 = span > 0.5 ? winBytes / 1024 / Math.max(span, 1) : 0;
+    var goodAll = S.firstAt ? S.uniqueBytes / 1024 / ((now - S.firstAt) / 1000) : 0;
+    var c = S.cfg, offered = c ? c.count * c.bytes * c.fps / 1024 : 0;
+    var spanned = S.maxFrame >= S.minFrame ? (S.maxFrame - S.minFrame + 1) * (c ? c.count : 1) : 0;
+    var s = track ? track.getSettings() : {};
+    return {
+      goodput5sKBs: +good5.toFixed(1), goodputKBs: +goodAll.toFixed(1), offeredKBs: +offered.toFixed(1),
+      codeRecovery: spanned ? +(S.unique / spanned).toFixed(3) : null,
+      sender: c ? c.cols + "x" + c.rows + " v" + c.ver + "-" + c.ecc + " @" + c.fps + "fps, " + c.bytes + " B/code" : null,
+      camera: s.width ? s.width + "x" + s.height + " @" + (s.frameRate ? s.frameRate.toFixed(0) : "?") : null,
+      cameraFps: +(S.camFrames / secs).toFixed(1), decodedFps: +(S.decFrames / secs).toFixed(1),
+      decodeMs: S.decFrames ? +(S.decMs / S.decFrames).toFixed(1) : null,
+      codesPerDecodedFrame: S.decFrames ? +(S.codes / S.decFrames).toFixed(2) : null,
+      tornFrames: S.mixed, uniqueCodes: S.unique, workers: NW, tryHarder: $("tryHarder").checked,
+      userAgent: navigator.userAgent,
+    };
+  }
+
+  setInterval(function () {
+    var r = summary();
+    $("good").textContent = kb(r.goodput5sKBs) + " KB/s";
+    $("goodAll").textContent = kb(r.goodputKBs) + " KB/s";
+    $("offered").textContent = r.offeredKBs ? kb(r.offeredKBs) + " KB/s" : "–";
+    $("eff").textContent = r.codeRecovery != null ? Math.round(r.codeRecovery * 100) + "%" : "–";
+    $("camInfo").textContent = r.camera || "–";
+    $("camFps").textContent = r.cameraFps;
+    $("decFps").textContent = r.decodedFps;
+    $("decMs").textContent = r.decodeMs != null ? r.decodeMs : "–";
+    $("perFrame").textContent = r.codesPerDecodedFrame != null ? r.codesPerDecodedFrame : "–";
+    $("mixed").textContent = r.tornFrames;
+    $("senderCfg").textContent = r.sender || "–";
+  }, 500);
+
+  $("startBtn").addEventListener("click", async function () {
+    $("err").textContent = "";
+    if (track) track.stop();
+    var wh = $("res").value.split("x");
+    try {
+      var stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: {
+        facingMode: { ideal: "environment" }, width: { ideal: +wh[0] }, height: { ideal: +wh[1] },
+        frameRate: { ideal: +$("camfps").value } } });
+      track = stream.getVideoTracks()[0];
+      try { await track.applyConstraints({ advanced: [{ focusMode: "continuous" }] }); } catch (e) { /* not supported */ }
+      video.srcObject = stream;
+      await video.play();
+      reset();
+      schedule();
+    } catch (e) {
+      $("err").textContent = "Camera failed: " + e.message + (window.isSecureContext ? "" : " (page is not a secure context: open it over https)");
+    }
+  });
+  // ?loopback=2x2,30,L,15: run the sender in a frame on this page and decode its canvas directly (no camera,
+  // no optics). Measures the software ceiling of the pipeline on this device.
+  var lb = new URLSearchParams(location.search).get("loopback");
+  if (lb) {
+    var p = lb.split(","), dpr = window.devicePixelRatio || 1;
+    var box = document.createElement("div");
+    box.style.cssText = "width:480px;height:270px;overflow:hidden;margin:10px 0;border:1px solid #444";
+    var frame = document.createElement("iframe");
+    frame.style.cssText = "border:0;transform-origin:0 0;width:" + 1920 / dpr + "px;height:" + 1080 / dpr + "px;transform:scale(" + 480 / (1920 / dpr) + ")";
+    frame.src = "sender.html?auto=1&grid=" + p[0] + "&ver=" + p[1] + "&ecc=" + p[2] + "&fps=" + p[3];
+    box.appendChild(frame);
+    video.parentNode.insertBefore(box, video);
+    frame.addEventListener("load", function () {
+      setTimeout(async function () {
+        var stream = frame.contentWindow.qbeamSender.canvas.captureStream(60);
+        track = stream.getVideoTracks()[0];
+        video.srcObject = stream;
+        await video.play();
+        reset();
+        schedule();
+      }, 500);
+    });
+  }
+
+  $("resetBtn").addEventListener("click", reset);
+  $("copyBtn").addEventListener("click", function () {
+    var text = JSON.stringify(summary(), null, 1);
+    $("result").textContent = text;
+    if (navigator.clipboard) navigator.clipboard.writeText(text).catch(function () {});
+  });
+})();
+</script>
+</body>
+</html>

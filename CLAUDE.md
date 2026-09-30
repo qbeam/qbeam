@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** qbeam 0.0.1 live on PyPI and npm; releases now automatic on merge to main (2026-10-01)
-- **Next up:** P0.4 spec v2, P0.12 benchmark rig, P0.13 speed spike, P0.5/P0.5a protocol v3 + sparse fountain code. P0.2 still needs a code of conduct
+- **Last done:** protocol SPEC v2 + test vectors; speed spike offline results and camera prototype (bench/spike, bench/RESULTS.md) (2026-10-01)
+- **Next up:** user runs phone camera tests from bench/spike/README.md and pastes results into bench/RESULTS.md; then decide plain QR vs colour fallback, P0.5/P0.5a protocol v3 + sparse fountain code, P0.12 rig. P0.2 still needs a code of conduct
 - **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
 
 ## Tracking rules

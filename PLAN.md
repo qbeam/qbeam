@@ -59,7 +59,7 @@ Development
 - [ ] P0.5a Choose the sparse fountain code: RaptorQ (RFC 6330) vs. Wirehair vs. a tuned LT code. The current dense GF(2) code decodes in O(K²) and is too slow for multi-MB files at high block rates. Check licences of existing implementations (Wirehair BSD; libcimbar — confirm) and whether a WASM build is practical.
 - [ ] P0.6 Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install qbeam[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
 - [ ] P0.12 **Build the benchmark rig first and measure competitors on it:** fixed monitor, 3 Android phones (low/mid/high) + 1 iPhone on a stand; measure cimbar (CameraFileCopy) and Decimen goodput for 1 MB and 10 MB files. Their numbers on our rig become the parity target.
-- [ ] P0.13 (in progress: offline benchmarks + camera prototype done, see bench/RESULTS.md; waiting on phone camera runs) **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
+- [x] P0.13 (done 2026-10-01: 128 KB/s avg / 149 best in Chrome on Android, 3x2 v30-L @15 fps, Y-plane copy + fixed mask; plain QR is enough, see bench/RESULTS.md) **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
 - [x] P0.7 CI skeleton (GitHub Actions): ubuntu, macos, windows; Python 3.8 → 3.13; Node 18/20/22 — `.github/workflows/ci.yml` (Python 3.8/3.12/3.13, Node 22) + `release.yml` (publish on merge when the version is new, trusted publishing)
 
 Testing
@@ -120,7 +120,7 @@ Development
 - [ ] P2.3a Sender render loop: pre-generate frames ahead in a Worker, draw to canvas with `requestAnimationFrame`, frame changes locked to display refresh (no tearing/half-drawn frames)
 - [ ] P2.4 Multi-code frames: 2×2 (and 3×2 on large screens) grid of codes per frame; terminal stays single-code
 - [ ] P2.4a Fallback if plain QR can't reach parity on the rig: high-density colour mode (cimbar-style or libcimbar-compatible, licence permitting)
-- [ ] P2.5 Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR
+- [ ] P2.5 Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR. Spike-proven recipe: WebCodecs VideoFrame → native-format luma plane → zxing `readBarcodesFromPixmap` in a worker pool, tryHarder on, `min` resolution constraints, canvas fallback; recommend Chrome on Android
 - [ ] P2.6 Receiver hint: decoder shows "missing X% of frames — try `--speed safe`" when its drop rate is high
 - [ ] P2.7 Keep v2 text frames decodable (backward compatibility) for one release
 - [ ] P2.8 npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
@@ -253,6 +253,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · **P0.13 done: parity in a browser.** Chrome/Android 1080p@60 decoded 3x2 v30-L @15 fps at 128 KB/s avg, 149 KB/s best 5 s. Key fixes: Y-plane copy (90 ms → 1 ms), fixed QR mask (18 → 1.1 ms/code), tryHarder. Firefox on Android is capped at 640x480 · Next: P0.12 competitor baseline on the same setup, P0.5/P0.5a protocol v3 + sparse fountain code
 
 - 2026-10-01 · P0.4 + P0.9 done (SPEC v2, vectors, spec-only Python check). P0.13 started: offline benchmarks show decode is cheap (7–12 ms/1080p frame), camera pixels cap density (~10 KB/frame at 1080p), fixed QR mask makes encoding 17x faster; 3x2 v30-L @15 fps offers 152 KB/s on paper. Camera sender/receiver prototype in bench/spike, verified by loopback · Next: user runs camera tests (bench/spike/README.md)
 

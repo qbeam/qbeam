@@ -46,13 +46,24 @@ Browser loopback (sender canvas → captureStream → worker pool, no optics), C
 
 ### Camera runs
 
-**Verdict so far (2026-10-01): plain QR is enough; no colour fallback needed.** A browser on a mid-range Android phone
-reached 87 KB/s average and 97 KB/s best (3x2 v25-L at 15 fps). Optics hold: codes read in ~75–83% of captures at
-up to 6 codes per frame, and 1080p resolves v30. The limit is receiver compute: the phone decodes only ~20 of 30
-camera frames per second because copying each frame out of the video costs ~105 ms (zxing itself ~40–60 ms).
-Decoding every camera frame would give ~94% recovery on the same run (~105 KB/s), and ~140 KB/s with 3x2 v30-L.
-That's what the native app (camera Y plane, native zxing-cpp) and a faster web copy path (WebCodecs VideoFrame,
-now an option in the receiver) need to deliver.
+**Verdict (2026-10-01): plain QR reaches competitor speed in a browser. P0.13 answered; no colour fallback needed.**
+
+Chrome on a mid-range Android phone, 1080p camera at 60 fps, decoded a 3x2 grid of v30-L codes shown at 15 fps at
+**128 KB/s average, 149 KB/s best 5 s** (84% of codes recovered). Competitors report ~100 KB/s (cimbar) and
+~129 KB/s (Decimen); those still need measuring on this same setup (P0.12).
+
+What it took, in order of impact:
+
+1. **Y-plane frame copy** (WebCodecs VideoFrame in its native format, luma plane straight into zxing's greyscale
+   entry point): per-frame copy 90–107 ms → ~1 ms, so every camera frame gets decoded.
+2. **Fixed QR mask** on the sender: 18 → 1.1 ms per code.
+3. **tryHarder**: 77% → 93% code recovery at no extra decode time.
+4. **Chrome, not Firefox** on Android: Firefox delivers 640x480 regardless of constraints.
+5. **Density matched to 1080p**: 6 codes of v25–v30 (~3.3+ camera px/module); v40 fails once blurred.
+
+Caveats: raw channel only (unique code bytes), not yet through the fountain code; one phone, one screen, one
+room; phone model unknown. Per-code headers and fountain overhead should cost a few percent. At this rate a
+10 MB file is ~6,000 symbols, so the dense GF(2) decoder (O(K²)) must be replaced (P0.5a).
 
 Use `bench/spike/README.md`; paste each receiver "Copy result" JSON here with phone model and notes.
 
@@ -63,6 +74,8 @@ Use `bench/spike/README.md`; paste each receiver "Copy result" JSON here with ph
 | 2026-10-01 | same | same, phone upright | 2x2 v25-L @10, tryHarder | 49.7 | **47.2** | 95% | 5 | Doubling fps costs almost nothing. |
 | 2026-10-01 | same | same, phone sideways | 3x2 v25-L @10, tryHarder | 74.6 | 55.4 | 74% | 0 | 3.71 read / 5.44 located per capture. |
 | 2026-10-01 | same | same, sideways | 3x2 v25-L @15, **VideoFrame RGBA** copy | 111.9 | 57.5 avg, 87.6 best 5 s | 51% | 0 | Copy 85.1 ms vs 92.7 canvas: RGBA conversion is the cost, not the canvas. 24.5 decoded fps. Fewer codes read per capture (2.57 / 4.81 located), likely aim/distance over a longer run. Next: Y-plane path (native NV12, no colour conversion). |
+| 2026-10-01 | same | Chrome 154, 1080x1920 @29.9 | 3x2 v25-L @15, Y plane, tryHarder | 111.9 | 84.8 avg, 111.0 best 5 s | 75% | 0 | Copy 0.9 ms (was ~90 with canvas/RGBA); every camera frame decoded (29.9/29.9). |
+| 2026-10-01 | Android (model not recorded) | **Chrome 154, 1080x1920, 59.2 fps** | **3x2 v30-L @15, Y plane**, tryHarder | 152.2 | **128.1 avg, 149.2 best 5 s** | 84% | 0 | **Parity.** Copy 1.1 + zxing 44.2 ms; 50.9 of 59.2 camera fps decoded; 3.32 read / 6.04 located per capture. |
 | 2026-10-01 | same | **Firefox 156, 640x480** @30 | 3x2 v25-L @15, **Y plane** | 111.9 | 76.8 avg, **107.2 best 5 s** | 69% | 0 | **Copy 0.3 ms**, zxing 41.8 ms, decoded 29.8 of 29.8 camera fps: every frame decoded. 3.09 read / 7.45 located per capture at only ~1.7 px/module. Needs a Chrome 1080p rerun. |
 | 2026-10-01 | same | **Firefox 156, 640x480** @30 | 3x2 **v30**-L @15, Y plane | 152.2 | 0.9 | 1% | 0 | 10.3 located but 0.02 read per capture: ~1.5 camera px/module. Resolution-limited, not a v30 verdict. |
 | 2026-10-01 | same | same, sideways | 3x2 v25-L @15, canvas copy | 111.9 | 78.0 avg, 87.9 best 5 s | 70% | 0 | Baseline for the copy comparison: copy 92.7 + zxing 41.6 ms, 23.9 decoded fps, 3.76 read / 4.91 located. |

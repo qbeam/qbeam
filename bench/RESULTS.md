@@ -64,6 +64,8 @@ phone), so crop tracking only pays off when codes cover a small part of the fram
 
 **Verdict (2026-10-01): plain QR reaches competitor speed in a browser. P0.13 answered; no colour fallback needed.**
 
+**Best so far: 246 KB/s average, 293 KB/s best 5 s** — iPhone, Chrome (WebKit), 3x2 v30-L at 30 fps, camera 58 fps. Android best: 203 / 267 at the same settings with the camera stuck at 30 fps.
+
 Chrome on a mid-range Android phone, 1080p camera at 60 fps, decoded a 3x2 grid of v30-L codes shown at 15 fps at
 **128 KB/s average, 149 KB/s best 5 s** (84% of codes recovered). Competitors report ~100 KB/s (cimbar) and
 ~129 KB/s (Decimen); those still need measuring on this same setup (P0.12).
@@ -91,6 +93,7 @@ Use `bench/spike/README.md`; paste each receiver "Copy result" JSON here with ph
 | 2026-10-01 | same | same, phone sideways | 3x2 v25-L @10, tryHarder | 74.6 | 55.4 | 74% | 0 | 3.71 read / 5.44 located per capture. |
 | 2026-10-01 | same | same, sideways | 3x2 v25-L @15, **VideoFrame RGBA** copy | 111.9 | 57.5 avg, 87.6 best 5 s | 51% | 0 | Copy 85.1 ms vs 92.7 canvas: RGBA conversion is the cost, not the canvas. 24.5 decoded fps. Fewer codes read per capture (2.57 / 4.81 located), likely aim/distance over a longer run. Next: Y-plane path (native NV12, no colour conversion). |
 | 2026-10-01 | same | Chrome 154, 1080x1920 @29.9 | 3x2 v25-L @15, Y plane, tryHarder | 111.9 | 84.8 avg, 111.0 best 5 s | 75% | 0 | Copy 0.9 ms (was ~90 with canvas/RGBA); every camera frame decoded (29.9/29.9). |
+| 2026-10-01 | **iPhone** (model not recorded), iOS 27.0.1 | **Chrome 155 on iOS (WebKit)**, 1920x1080 @58.1 | **3x2 v30-L @30, Y plane**, tryHarder | 304.5 | **246.4 avg, 293.4 best 5 s** | 81% | 0 | Best so far. Y-plane copy works on WebKit (0.9 ms). 47.9 decoded fps with 3 workers (45.5 ms/frame); 4.15 read / 7.61 located per capture. ~2 captures per sender frame at 60 fps. |
 | 2026-10-01 | Android (model not recorded) | Chrome 154, 1080x1920, **29.8 fps** (asked 60) | **3x2 v30-L @30, Y plane**, tryHarder | 304.5 | **203.4 avg, 267.3 best 5 s** | 67% | 0 | One capture per sender frame (camera at 30): 3.68 read / 6.35 located per capture; every camera frame decoded (46.6 ms). A 60 fps camera should give two chances per frame. Receiver now demands `min` frame rate first. |
 | 2026-10-01 | Android (model not recorded) | **Chrome 154, 1080x1920, 59.2 fps** | **3x2 v30-L @15, Y plane**, tryHarder | 152.2 | **128.1 avg, 149.2 best 5 s** | 84% | 0 | **Parity.** Copy 1.1 + zxing 44.2 ms; 50.9 of 59.2 camera fps decoded; 3.32 read / 6.04 located per capture. |
 | 2026-10-01 | same | **Firefox 156, 640x480** @30 | 3x2 v25-L @15, **Y plane** | 111.9 | 76.8 avg, **107.2 best 5 s** | 69% | 0 | **Copy 0.3 ms**, zxing 41.8 ms, decoded 29.8 of 29.8 camera fps: every frame decoded. 3.09 read / 7.45 located per capture at only ~1.7 px/module. Needs a Chrome 1080p rerun. |

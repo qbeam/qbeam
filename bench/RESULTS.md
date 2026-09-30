@@ -11,7 +11,6 @@ capture filling 90% of the frame; "blur" = 3x3 box blur. Source: `bench/spike/of
 
 | Grid | QR | Bytes/code | px/module in 1080p | Decoded | Decoded, blurred | KB/frame | Decode ms/frame | KB/s @15 fps | KB/s @30 fps |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- | --- |
-| 2026-10-01 | Android 16 (model not recorded) | Firefox 156, **640x480** @30 (asked for 1080p) | 2x2 v30-L @15 | 101.5 | 0.1 | 1 code | 0 | Invalid run: Firefox ignored the `ideal` 1080p request. 1.5 camera px/module vs ~3.3 needed. Decode 80.7 ms/frame. Receiver now requests `min` resolution and warns below 1280 px. |
 | 1x1 | v25-L | 1273 | 7.8 | 6/6 | 6/6 | 1.2 | 9.2 | 19 | 37 |
 | 1x1 | v40-L | 2953 | 5.3 | 6/6 | 6/6 | 2.9 | 6.3 | 43 | 87 |
 | 2x1 | v30-L | 1732 | 6.0 | 12/12 | 12/12 | 3.4 | 7.1 | 51 | 101 |
@@ -51,3 +50,4 @@ Not run yet. Use `bench/spike/README.md`; paste each receiver "Copy result" JSON
 
 | Date | Phone | Camera | Sender | Offered KB/s | Goodput KB/s | Codes recovered | Torn frames | Notes |
 | --- | --- | --- | --- | --- | --- | --- | --- | --- |
+| 2026-10-01 | Android 16 (model not recorded) | Firefox 156, **640x480** @30 (asked for 1080p) | 2x2 v30-L @15 | 101.5 | 0.1 | 1 code | 0 | Invalid run: Firefox ignored the `ideal` 1080p request. 1.5 camera px/module vs ~3.3 needed. Decode 80.7 ms/frame. Receiver now requests `min` resolution and warns below 1280 px. |

@@ -75,7 +75,7 @@ Marketing
 ## P1 — Python CLI + terminal mode (Oct 8–31)
 
 Development
-- [ ] P1.1 Package `encode.py` as `qbeam` with entry point; commands: `send`, `receive`, `version`
+- [ ] P1.1 Package `encode.py` as `qbeam` with entry point; commands: `send`, `receive`, `version` — started early for the 0.0.1 name claim: `qbeam send` / `receive` / `--version` exist in py/ and js/; still needs the P1 features below
 - [ ] P1.2 `send <file>` / `send -` (stdin) / `send <dir> --archive` (respect `.gitignore` + existing junk patterns) / `--exclude`
 - [ ] P1.3 Vendor a pure-Python QR encoder (e.g. Nayuki `qrcodegen`, MIT) for terminal mode
 - [ ] P1.4 Terminal renderer: Unicode half-blocks (2 modules per char), ANSI cursor-home redraw, auto-fit QR version to terminal size, `--invert` for light themes, clean exit on Ctrl-C (restore cursor/screen)
@@ -252,6 +252,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-09-30 · qbeam 0.0.1 built for PyPI (py/src/qbeam, stdlib only, assets packaged) and npm (js/bin/qbeam.js, single-file send + receive, exports fountain codec). Tested: clean venv install, output matches pre-package encoder, uvx on Python 3.8 and 3.13, npm install from tarball, fountain round-trip with 30–50% frame loss for Node- and Python-made pages. Fixed: Node CLI left the second __TITLE__ unfilled · Next: user publishes to PyPI/npm, push to GitHub
 
 - 2026-09-30 · Initial commit 963936a. P0.1 done: name is qbeam (free on PyPI, npm, .dev, GitHub, Homebrew when checked); placeholders replaced in repo · Next: P0.10 register qbeam.dev + packages (user), P0.4 spec v2
 

@@ -1,0 +1,39 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "qbeam"
+dynamic = ["version"]
+description = "Move files from a locked-down machine to your phone over animated QR codes. No network, no admin rights."
+readme = "README.md"
+license = "Apache-2.0"
+license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
+requires-python = ">=3.8"
+dependencies = []
+keywords = ["qr", "qr-code", "file-transfer", "offline", "air-gap", "fountain-code", "cli"]
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Environment :: Console",
+    "Intended Audience :: Developers",
+    "Operating System :: OS Independent",
+    "Programming Language :: Python :: 3",
+    "Topic :: Utilities",
+]
+
+[project.urls]
+Homepage = "https://qbeam.dev"
+Source = "https://github.com/qbeam/qbeam"
+Issues = "https://github.com/qbeam/qbeam/issues"
+
+[project.scripts]
+qbeam = "qbeam.cli:main"
+
+[tool.setuptools.dynamic]
+version = { attr = "qbeam.__version__" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.package-data]
+qbeam = ["assets/*"]

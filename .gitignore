@@ -25,3 +25,16 @@ node_modules/
 # Claude Code session metadata
 .claude/.cc-writes/
 qrtool/
+
+# Assets copied into the Python package at release time (py/sync_assets.py)
+py/src/qbeam/assets/
+
+# Build output
+dist/
+!web/dist/
+py/LICENSE
+py/THIRD_PARTY_NOTICES.md
+js/assets/
+js/LICENSE
+js/THIRD_PARTY_NOTICES.md
+*.tgz

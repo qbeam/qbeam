@@ -11,8 +11,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** initial commit 963936a (layout, license, docs); name chosen: qbeam (2026-09-30)
-- **Next up:** P0.10 register qbeam.dev / PyPI / npm / GitHub org (user), P0.4 spec v2, P0.8 baseline tests, P0.12 benchmark rig, P0.13 speed spike. P0.2 still needs the public GitHub repo and a code of conduct
+- **Last done:** qbeam 0.0.1 packaged for PyPI and npm and tested (clean installs, Python 3.8/3.12/3.13 via uvx, npm round-trip decode) (2026-09-30)
+- **Next up:** user publishes qbeam 0.0.1 to PyPI and npm (P0.10); push to github.com/qbeam; then P0.4 spec v2, P0.8 baseline tests, P0.12 rig, P0.13 speed spike
 - **Blockers / open decisions:** encryption approach (P0.6); sparse fountain code choice (P0.5a)
 
 ## Tracking rules
@@ -26,7 +26,10 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 | File | Role |
 | --- | --- |
-| `py/encode.py` | CLI: file/folder → self-contained `*.sender.html` (stdlib only; gzip or xz; `--archive`, `--exclude`). Reads templates from `web/` and `js/` |
+| `py/src/qbeam/cli.py` | Python CLI (`qbeam send` / `qbeam receive`): file/folder → self-contained `*.sender.html` (stdlib only; gzip or xz; `--archive`, `--exclude`). Assets load from `qbeam/assets/` when packaged, else from `web/` and `js/` |
+| `py/encode.py` | Shim: run the CLI from a checkout (`python3 py/encode.py <path>` = `qbeam send <path>`) |
+| `py/pyproject.toml`, `py/sync_assets.py` | PyPI packaging; run `sync_assets.py` before `python -m build py` (copies assets + license files, all gitignored) |
+| `js/bin/qbeam.js`, `js/package.json` | npm CLI (Node ≥ 18): `send` for single files (gzip) and `receive`; `prepack` runs `js/scripts/sync-assets.js` |
 | `web/sender_shell.html`, `web/sender_app.js` | Sender page template; placeholders are replaced by `encode.py` |
 | `js/fountain.js` | Systematic random linear fountain code over GF(2); shared by sender and decoder |
 | `web/decoder_shell.html`, `web/decoder_app.js` | Camera decoder; SHA-256 check; gunzip in browser |

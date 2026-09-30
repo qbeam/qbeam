@@ -11,6 +11,7 @@ license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.8"
 dependencies = []
+
 keywords = ["qr", "qr-code", "file-transfer", "offline", "air-gap", "fountain-code", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
@@ -20,6 +21,9 @@ classifiers = [
     "Programming Language :: Python :: 3",
     "Topic :: Utilities",
 ]
+
+[project.optional-dependencies]
+crypto = ["cryptography>=41"]  # encrypted sending: pip install "qbeam[crypto]"
 
 [project.urls]
 Homepage = "https://qbeam.dev"

@@ -12,7 +12,9 @@ var QBeam3 = (function () {
   var MAGIC0 = 0xb3, MAGIC1 = 0x71, VERSION = 3;
   var HEADER = 18, TRAILER = 4, OVERHEAD = HEADER + TRAILER;
   var KMAX = 2048;
-  var MUST_UNDERSTAND = 0x0f; // flag bits a receiver must reject if it doesn't know them (none defined yet)
+  var MUST_UNDERSTAND = 0x0f; // flag bits a receiver must reject if it doesn't know them
+  var FLAG_ENCRYPTED = 0x01;
+  var KNOWN_FLAGS = FLAG_ENCRYPTED;
 
   // ---- CRC-32 (IEEE 802.3, as zlib) ----
   var CRC_TABLE = (function () {
@@ -132,7 +134,7 @@ var QBeam3 = (function () {
     var T = v.getUint16(12);
     if (T < 1 || b.length !== OVERHEAD + T) return { error: "length" };
     if (v.getUint32(HEADER + T) !== crc32(b, 0, HEADER + T)) return { error: "crc" };
-    if (b[3] & MUST_UNDERSTAND) return { error: "flags", flags: b[3] };
+    if (b[3] & MUST_UNDERSTAND & ~KNOWN_FLAGS) return { error: "flags", flags: b[3] };
     return { session: v.getUint32(4), L: v.getUint32(8), T: T, esi: v.getUint32(14), flags: b[3],
              symbol: b.subarray(HEADER, HEADER + T) };
   }
@@ -239,8 +241,62 @@ var QBeam3 = (function () {
     return { encoding: enc, filenameUtf8: b.subarray(4, 4 + n), sha256: b.subarray(4 + n, 36 + n), data: b.subarray(36 + n) };
   }
 
+  // ---- Encryption envelope (flag bit 0) ----
+  // u8 scheme (1) | u32 PBKDF2 iterations | 16-byte salt | 12-byte nonce | AES-256-GCM(container) + 16-byte tag.
+  // The first 33 bytes are the GCM additional authenticated data. Async: uses WebCrypto (browsers, Node >= 19).
+  var ENVELOPE_PREFIX = 33, MAX_ITERATIONS = 10000000;
+
+  function subtle() {
+    var c = typeof globalThis !== "undefined" && globalThis.crypto;
+    if (!c || !c.subtle) throw new Error("WebCrypto is not available (needs a secure context)");
+    return c.subtle;
+  }
+
+  function deriveKey(passphrase, salt, iterations) {
+    var s = subtle();
+    return s.importKey("raw", new TextEncoder().encode(passphrase), "PBKDF2", false, ["deriveKey"]).then(function (base) {
+      return s.deriveKey({ name: "PBKDF2", hash: "SHA-256", salt: salt, iterations: iterations }, base,
+                         { name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
+    });
+  }
+
+  // opts: {iterations, salt (16 bytes), nonce (12 bytes)}; salt and nonce default to fresh random values.
+  function sealEnvelope(container, passphrase, opts) {
+    opts = opts || {};
+    var iterations = opts.iterations || 600000;
+    var salt = opts.salt || globalThis.crypto.getRandomValues(new Uint8Array(16));
+    var nonce = opts.nonce || globalThis.crypto.getRandomValues(new Uint8Array(12));
+    var prefix = new Uint8Array(ENVELOPE_PREFIX);
+    prefix[0] = 1;
+    new DataView(prefix.buffer).setUint32(1, iterations);
+    prefix.set(salt, 5);
+    prefix.set(nonce, 21);
+    return deriveKey(passphrase, salt, iterations).then(function (key) {
+      return subtle().encrypt({ name: "AES-GCM", iv: nonce, additionalData: prefix, tagLength: 128 }, key, container);
+    }).then(function (ct) {
+      var out = new Uint8Array(ENVELOPE_PREFIX + ct.byteLength);
+      out.set(prefix, 0);
+      out.set(new Uint8Array(ct), ENVELOPE_PREFIX);
+      return out;
+    });
+  }
+
+  // Resolves to the container bytes; rejects with Error("scheme" | "iterations" | "short" | "auth").
+  function openEnvelope(envelope, passphrase) {
+    if (envelope.length < ENVELOPE_PREFIX + 16) return Promise.reject(new Error("short"));
+    if (envelope[0] !== 1) return Promise.reject(new Error("scheme"));
+    var iterations = new DataView(envelope.buffer, envelope.byteOffset, envelope.byteLength).getUint32(1);
+    if (iterations < 1 || iterations > MAX_ITERATIONS) return Promise.reject(new Error("iterations"));
+    var prefix = envelope.slice(0, ENVELOPE_PREFIX);
+    return deriveKey(passphrase, prefix.slice(5, 21), iterations).then(function (key) {
+      return subtle().decrypt({ name: "AES-GCM", iv: prefix.slice(21, 33), additionalData: prefix, tagLength: 128 },
+                              key, envelope.slice(ENVELOPE_PREFIX));
+    }).then(function (pt) { return new Uint8Array(pt); }, function () { throw new Error("auth"); });
+  }
+
   return {
-    VERSION: VERSION, HEADER: HEADER, OVERHEAD: OVERHEAD, KMAX: KMAX,
+    VERSION: VERSION, HEADER: HEADER, OVERHEAD: OVERHEAD, KMAX: KMAX, FLAG_ENCRYPTED: FLAG_ENCRYPTED,
+    sealEnvelope: sealEnvelope, openEnvelope: openEnvelope,
     crc32: crc32, layout: layout, coefficients: coefficients,
     Encoder: Encoder, Decoder: Decoder,
     encodeCode: encodeCode, parseCode: parseCode,

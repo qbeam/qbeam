@@ -57,7 +57,7 @@ Development
 - [x] P0.4 Write `protocol/SPEC.md` v2 describing today's `Q2H`/`Q2D` text frames exactly (the baseline)
 - [x] P0.5 (done 2026-10-01: protocol/SPEC.md v3 draft, js/qbeam3.js reference, py/src/qbeam/protocol_v3.py encoder, v3 vectors) Draft protocol v3 (binary frames): magic + version byte, session id, K, length, block size, ESI, flags; header frame with SHA-256, filename, encoding (gz / raw / tar.gz / tar.xz), optional encryption params. Frame-level CRC32. Designed for speed from day one: binary payloads up to QR v40-L (2,953 B), multiple codes per displayed frame, and a sparse fountain code (below).
 - [x] P0.5a (done 2026-10-01: segmented dense GF(2) code, KMAX 2048 blocks per segment; 0.5% overhead at 10 MB and 2.2% at 40 MB under 20% loss, 40 MB decodes in 1.7 s on a Mac; simpler to port than RaptorQ/Wirehair, see bench/protocol/fountain_v3.js) Choose the sparse fountain code: RaptorQ (RFC 6330) vs. Wirehair vs. a tuned LT code. The current dense GF(2) code decodes in O(K²) and is too slow for multi-MB files at high block rates. Check licences of existing implementations (Wirehair BSD; libcimbar — confirm) and whether a WASM build is practical.
-- [ ] P0.6 Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install qbeam[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
+- [x] P0.6 (decided 2026-10-01: optional extra `qbeam[crypto]`; PBKDF2-HMAC-SHA256 (600k iterations) + AES-256-GCM envelope, flag bit 0; SPEC v3 §7, js/qbeam3.js, py/src/qbeam/crypto_v3.py, vectors) Decide encryption approach (Python stdlib has no AES): (a) optional extra `pip install qbeam[crypto]` using `cryptography`, or (b) vendored pure-Python AES-GCM (slow but fine for small files). Record decision in SPEC.md.
 - [ ] P0.12 **Build the benchmark rig first and measure competitors on it:** fixed monitor, 3 Android phones (low/mid/high) + 1 iPhone on a stand; measure cimbar (CameraFileCopy) and Decimen goodput for 1 MB and 10 MB files. Their numbers on our rig become the parity target.
 - [x] P0.13 (done 2026-10-01: 128 KB/s avg / 149 best in Chrome on Android, 3x2 v30-L @15 fps, Y-plane copy + fixed mask; plain QR is enough, see bench/RESULTS.md) **Speed spike (1–2 days):** prototype in the browser: 2×2 grid of v30–v40 codes at 15–30 fps, decoded by zxing-cpp WASM and Android's native scanner; record the best goodput. Confirms parity is reachable with plain QR before P1 commits, or triggers the colour-mode fallback (P2.4a) early.
 - [x] P0.7 CI skeleton (GitHub Actions): ubuntu, macos, windows; Python 3.8 → 3.13; Node 18/20/22 — `.github/workflows/ci.yml` (Python 3.8/3.12/3.13, Node 22) + `release.yml` (publish on merge when the version is new, trusted publishing)
@@ -125,7 +125,7 @@ Development
 - [ ] P2.7 Keep v2 text frames decodable (backward compatibility) for one release
 - [ ] P2.8 npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
 - [ ] P2.9 Hosted web decoder as an installable offline PWA; also downloadable single HTML
-- [ ] P2.10 Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it
+- [ ] P2.10 Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it. Codec done (P0.6); remaining: CLI flag (generate a passphrase and print it in the terminal, never on the QR screen), receiver prompt, friendly error when `cryptography` is missing
 
 Testing
 - [ ] P2.11 Cross-codec tests: Python-encode → JS-decode and JS-encode → Python-decode on all test vectors
@@ -253,6 +253,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · P0.6 done: encryption as optional extra qbeam[crypto]. SPEC v3 §7 envelope (PBKDF2-HMAC-SHA256 + AES-256-GCM, prefix authenticated), flag bit 0 must-understand. JS (WebCrypto) and Python (hashlib + cryptography) produce identical vectors; tests cover wrong passphrase, tampering, iteration cap, encrypted transfer under loss; CI installs cryptography only for the encryption tests · Next: build v3 into senders and receivers (P1/P2)
 
 - 2026-10-01 · P0.5 + P0.5a done: protocol v3 draft (18-byte binary header + CRC-32 per code, segmented dense fountain code with KMAX 2048, container with filename/encoding/SHA-256). JS reference codec, Python encoder written from the spec (matches all vectors), JS tests incl. decoding Python-encoded codes under loss; CI runs them and guards v3 vector drift. iPhone Chrome spike run: 246 KB/s avg / 293 best. Decimen baseline skipped for now (misconfigured run gave ~1 KB/s) · Next: P0.6 encryption decision, then P1/P2 senders and receivers on v3
 

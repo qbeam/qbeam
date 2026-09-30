@@ -32,6 +32,8 @@ jobs:
         run: uv python install ${{ matrix.python }}
       - name: Python tests
         run: '"$(uv python find ${{ matrix.python }})" -m unittest discover -s py/tests -v'
+      - name: Python encryption tests (with the optional qbeam[crypto] package)
+        run: uv run --no-project --python ${{ matrix.python }} --with "cryptography>=41" python -m unittest discover -s py/tests -p "test_crypto_v3.py" -v
       - name: Round-trip tests (Node and Python CLIs)
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/roundtrip.js
       - name: Protocol v3 tests (JS codec, Python-encoded codes)

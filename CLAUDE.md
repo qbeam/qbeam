@@ -12,9 +12,9 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P0 Foundations (in progress)
-- **Last done:** protocol v3 draft + reference codec (js/qbeam3.js), Python encoder, vectors and tests (2026-10-01)
-- **Next up:** P0.6 encryption decision; then build v3 into the senders (Python CLI page + terminal, npm) and the web receiver using the spike recipe (P1/P2). P0.12 competitor baseline deferred by user. P0.2 still needs a code of conduct
-- **Blockers / open decisions:** encryption approach (P0.6); paid strategy for the web decoder (deferred by user)
+- **Last done:** P0.6 encryption (optional qbeam[crypto]) specified, implemented in JS + Python, vector-tested (2026-10-01)
+- **Next up:** build protocol v3 into the senders (Python CLI page + terminal mode, npm) and the web receiver using the spike recipe (P1/P2). P0.12 competitor baseline deferred by user. P0.2 still needs a code of conduct
+- **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
 

@@ -37,7 +37,7 @@ All integers are big-endian and unsigned.
 | --- | --- | --- | --- |
 | 0 | 2 | magic | `0xB3 0x71` (not ASCII, so never confused with v1/v2 text frames) |
 | 2 | 1 | version | `3` |
-| 3 | 1 | flags | bits 0–3: must-understand; bits 4–7: may be ignored. None defined yet: senders MUST send 0 |
+| 3 | 1 | flags | bits 0–3: must-understand; bits 4–7: may be ignored. Bit 0 = **encrypted** (§7); all others reserved, sent as 0 |
 | 4 | 4 | session | random per transfer |
 | 8 | 4 | L | payload (container) length in bytes |
 | 12 | 2 | T | symbol size in bytes, ≥ 1 |
@@ -117,10 +117,35 @@ T should fill the QR code: `T = (byte capacity of the chosen version at level L)
 configuration (3×2 grid of version 30, level L) gives `T = 1732 − 22 = 1710`. zxing-cpp's encoder adds an ECI
 marker for binary data that costs a few bytes; senders using it must leave room for that.
 
-### 7. Not yet decided
+### 7. Encryption (flag bit 0)
 
-- **Encryption** (PLAN P0.6): will use a must-understand flag bit, so older receivers refuse encrypted codes
-  instead of saving ciphertext.
+Anyone who can see or film the sender's screen can read an unencrypted transfer. With flag bit 0 set on every code,
+the fountain payload is not the container but an **envelope**: a plaintext prefix followed by the container
+encrypted with a key derived from a passphrase. Receivers that don't implement bit 0 reject the codes (§2), so an
+encrypted transfer is never saved as ciphertext.
+
+| Offset | Size | Field |
+| --- | --- | --- |
+| 0 | 1 | scheme: `1` = PBKDF2-HMAC-SHA256 + AES-256-GCM |
+| 1 | 4 | PBKDF2 iterations |
+| 5 | 16 | salt |
+| 21 | 12 | nonce |
+| 33 | rest | AES-256-GCM ciphertext of the container, followed by the 16-byte tag |
+
+- **Key:** `PBKDF2-HMAC-SHA256(password = UTF-8 passphrase, salt, iterations, dkLen = 32)`.
+- **Encryption:** AES-256-GCM with that key and nonce, **additional authenticated data = envelope bytes 0–32**
+  (scheme, iterations, salt, nonce), 128-bit tag appended to the ciphertext.
+- **Senders** MUST use a fresh random 16-byte salt and 12-byte nonce per transfer and SHOULD use at least 600,000
+  iterations. They SHOULD NOT show the passphrase on the sending screen: it would be filmed with the codes.
+- **Receivers** MUST reject unknown schemes and iteration counts above 10,000,000 (a cheap denial of service
+  otherwise), ask the user for the passphrase, and treat an authentication failure as "wrong passphrase or
+  damaged transfer" without saving anything. After decryption the container is handled as in §5, including the
+  SHA-256 check.
+- The test vector uses 1,000 iterations to keep tests fast; that is allowed on the wire but not what senders use.
+
+PBKDF2 is used rather than a memory-hard function because it is available natively in browsers (WebCrypto),
+Android, iOS and Python's standard library. The Python sender needs the optional `cryptography` package only for
+AES-GCM (`pip install "qbeam[crypto]"`); without it, qbeam still sends unencrypted.
 
 ---
 

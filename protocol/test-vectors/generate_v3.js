@@ -60,11 +60,17 @@ function mutate(f) { var b = new Uint8Array(good); f(b); return hex(b); }
 var reject = [
   { reason: "crc", codeHex: mutate(function (b) { b[30] ^= 1; }) },
   { reason: "version", codeHex: mutate(function (b) { b[2] = 4; }) },
-  { reason: "flags", note: "must-understand bit 0 set, CRC recomputed", codeHex: (function () {
-      var b = Q.encodeCode(session, container.length, T, 0, senc.symbol(0), 0x01); return hex(b); })() },
+  { reason: "flags", note: "unknown must-understand bit 1 set, CRC recomputed", codeHex: (function () {
+      var b = Q.encodeCode(session, container.length, T, 0, senc.symbol(0), 0x02); return hex(b); })() },
   { reason: "length", codeHex: hex(good.subarray(0, good.length - 1)) },
 ];
 
+// Encryption envelope of the session container (1,000 iterations for speed; senders use >= 600,000).
+var envelopeOpts = { iterations: 1000, salt: Uint8Array.from({ length: 16 }, function (_, i) { return i; }),
+                     nonce: Uint8Array.from({ length: 12 }, function (_, i) { return 0xa0 + i; }) };
+var passphrase = "correct horse battery staple";
+
+Q.sealEnvelope(container, passphrase, envelopeOpts).then(function (envelope) {
 var out = {
   description: "qbeam protocol v3 test vectors. payload byte i = (i*31 + 7) & 0xff. See protocol/SPEC.md.",
   constants: { magic: [0xb3, 0x71], version: 3, headerBytes: Q.HEADER, overheadBytes: Q.OVERHEAD, kmax: Q.KMAX },
@@ -76,7 +82,13 @@ var out = {
     sha256Hex: hex(sha), containerHex: hex(container), codes: codes,
   },
   reject: reject,
+  encryption: {
+    passphrase: passphrase, iterations: envelopeOpts.iterations, saltHex: hex(envelopeOpts.salt),
+    nonceHex: hex(envelopeOpts.nonce), plaintext: "session.containerHex", envelopeHex: hex(envelope),
+    codeHex: hex(Q.encodeCode(session, envelope.length, T, 0, new Q.Encoder(envelope, T).symbol(0), Q.FLAG_ENCRYPTED)),
+  },
 };
 var file = path.join(__dirname, "v3.json");
 fs.writeFileSync(file, JSON.stringify(out, null, 1) + "\n");
 console.log("wrote " + path.relative(process.cwd(), file));
+});

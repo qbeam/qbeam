@@ -98,5 +98,57 @@ test("Python-encoded codes decode here (cross-language)", function () {
   eq(hex(crypto.createHash("sha256").update(ct.data).digest()), hex(ct.sha256), "sha256");
 });
 
-if (failures) { console.log(failures + " failure(s)"); process.exit(1); }
-console.log("all v3 tests passed");
+// ---- Encryption envelope (async: WebCrypto) ----
+async function atest(name, fn) {
+  try { await fn(); console.log("ok   " + name); }
+  catch (e) { failures++; console.log("FAIL " + name + ": " + e.message); }
+}
+async function rejects(promise, message) {
+  try { await promise; } catch (e) { eq(e.message, message, "error"); return; }
+  throw new Error("expected rejection with " + message);
+}
+
+(async function () {
+  var E = V.encryption, container = new Uint8Array(Buffer.from(V.session.containerHex, "hex"));
+  var envelope = new Uint8Array(Buffer.from(E.envelopeHex, "hex"));
+
+  await atest("envelope vector: seal reproduces it", async function () {
+    var env = await Q.sealEnvelope(container, E.passphrase, { iterations: E.iterations,
+      salt: new Uint8Array(Buffer.from(E.saltHex, "hex")), nonce: new Uint8Array(Buffer.from(E.nonceHex, "hex")) });
+    eq(hex(env), E.envelopeHex, "envelope");
+  });
+
+  await atest("envelope vector: opens to the container", async function () {
+    eq(hex(await Q.openEnvelope(envelope, E.passphrase)), V.session.containerHex, "container");
+  });
+
+  await atest("encrypted flag is understood, unknown flags are not", async function () {
+    var p = Q.parseCode(new Uint8Array(Buffer.from(E.codeHex, "hex")));
+    eq(p.error, undefined, "error"); eq(p.flags, Q.FLAG_ENCRYPTED, "flags");
+  });
+
+  await atest("wrong passphrase, tampering and bad iteration counts are rejected", async function () {
+    await rejects(Q.openEnvelope(envelope, "wrong"), "auth");
+    var t = new Uint8Array(envelope); t[40] ^= 1;
+    await rejects(Q.openEnvelope(t, E.passphrase), "auth");
+    t = new Uint8Array(envelope); t[10] ^= 1; // salt is authenticated
+    await rejects(Q.openEnvelope(t, E.passphrase), "auth");
+    t = new Uint8Array(envelope); new DataView(t.buffer).setUint32(1, 10000001);
+    await rejects(Q.openEnvelope(t, E.passphrase), "iterations");
+    t = new Uint8Array(envelope); t[0] = 2;
+    await rejects(Q.openEnvelope(t, E.passphrase), "scheme");
+  });
+
+  await atest("encrypted transfer end to end under 25% loss", async function () {
+    var data = new Uint8Array(crypto.randomBytes(200000));
+    var sha = new Uint8Array(crypto.createHash("sha256").update(data).digest());
+    var c = Q.encodeContainer(new Uint8Array(Buffer.from("secret.bin")), "raw", sha, data);
+    var env = await Q.sealEnvelope(c, "hunter2", { iterations: 10000 });
+    var r = transfer(env, 1710, 0.25, 0x5eed);
+    var ct = Q.parseContainer(await Q.openEnvelope(r.payload, "hunter2"));
+    eq(hex(ct.data), hex(data), "data");
+  });
+
+  if (failures) { console.log(failures + " failure(s)"); process.exit(1); }
+  console.log("all v3 tests passed");
+})();

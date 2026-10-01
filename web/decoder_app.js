@@ -41,8 +41,21 @@
 
   function newSession(p) {
     return { key: sessionKey(p), L: p.L, T: p.T, flags: p.flags, dec: new QBeam3.Decoder(p.L, p.T),
-             started: performance.now(), lastNew: performance.now(), codes: 0, done: false, finishing: false };
+             started: performance.now(), lastNew: performance.now(), codes: 0, done: false, finishing: false,
+             recent: [] };
   }
+
+  // Senders number their codes consecutively, so the share of numbers seen in the last few seconds is the share of
+  // codes this camera is catching. Below half, the transfer is far slower than it should be: say what to change.
+  var HINT_WINDOW_MS = 5000;
+  function catchRate(s, now) {
+    while (s.recent.length && now - s.recent[0].t > HINT_WINDOW_MS) s.recent.shift();
+    if (s.recent.length < 20) return null;
+    var lo = Infinity, hi = -1;
+    s.recent.forEach(function (r) { if (r.esi < lo) lo = r.esi; if (r.esi > hi) hi = r.esi; });
+    return hi - lo + 1 >= 30 ? s.recent.length / (hi - lo + 1) : null;
+  }
+  function setHint(t) { var h = $("hint"); h.textContent = t || ""; h.style.display = t ? "block" : "none"; }
   function sessionKey(p) { return p.session + "|" + p.L + "|" + p.T + "|" + (p.flags & 0x0f); }
 
   function onCode(bytes) {
@@ -67,6 +80,7 @@
     }
     if (S.done) return;
     S.codes++;
+    if (!S.dec.seen.has(p.esi)) S.recent.push({ t: now, esi: p.esi }); // for the catch-rate hint
     if (S.dec.add(p.esi, p.symbol)) {
       S.lastNew = now;
       if (S.dec.complete() && !S.finishing) { S.finishing = true; finish(S); }
@@ -272,7 +286,12 @@
 
     if (notice && (!S || S.dec.rank === 0)) setError(notice);
     else if (coarse) setError("The camera is only " + stats.width + "×" + stats.height + ". Use Chrome or Safari; Firefox on Android is limited to 640×480.");
-    if (!S || S.done || S.finishing) return;
+    if (!S || S.done || S.finishing) { setHint(""); return; }
+    var caught = catchRate(S, performance.now());
+    setHint(caught !== null && caught < 0.5
+      ? "Catching only " + Math.round(caught * 100) + "% of the codes. Move closer so the codes fill the view, hold still, " +
+        "and avoid glare on the screen. If it stays low, switch the sender to “safe” speed."
+      : "");
     var rank = S.dec.rank, K = S.dec.lay.K, pct = Math.floor(100 * rank / K);
     var el = (performance.now() - S.started) / 1000, rate = S.L * rank / K / Math.max(el, 0.1);
     bar.style.width = pct + "%"; bar.textContent = pct + "%";

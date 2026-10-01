@@ -14,6 +14,7 @@
   button, select, input { padding: 10px 14px; font-size: 16px; border-radius: 6px; border: 1px solid #555; background: #222; color: #eee; }
   #cameraWrap { display: none; gap: 6px; align-items: center; }
   #status { margin-top: 12px; font-size: 15px; min-height: 40px; }
+  #hint { display: none; margin-top: 8px; padding: 10px; background: #3d3210; border: 1px solid #a8862a; border-radius: 6px; color: #ffe08a; font-size: 13px; }
   #error { display: none; margin-top: 8px; padding: 10px; background: #4a1414; border: 1px solid #b33; border-radius: 6px; color: #ffb3b3; font-size: 13px; }
   #progressWrap { margin-top: 10px; height: 22px; background: #333; border-radius: 6px; overflow: hidden; }
   #progressBar { height: 100%; width: 0; background: #2e7d32; color: #fff; font-size: 12px; line-height: 22px; text-align: center; white-space: nowrap; }
@@ -35,6 +36,7 @@
   <div id="status"></div>
   <div id="progressWrap"><div id="progressBar"></div></div>
   <div id="passWrap"><input id="passInput" type="password" autocomplete="off" placeholder="passphrase"> <button id="passBtn">Decrypt</button></div>
+  <div id="hint"></div>
   <div id="error"></div>
   <div id="stats"></div>
 </div>

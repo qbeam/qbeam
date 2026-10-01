@@ -32,13 +32,15 @@
     if (++loaded < 2) return;
     var canvas = sender.contentDocument.getElementById("screen");
     var R = receiver.contentWindow;
-    R.qbeamReceiver.useStream(canvas.captureStream(30));
+    R.qbeamReceiver.useStream(canvas.captureStream(+q.get("capfps") || 30)); // capfps < sender fps simulates a slow camera
     started = performance.now();
     var passTyped = false;
     var timer = setInterval(function () {
       var doc = receiver.contentDocument, status = doc.getElementById("status").textContent;
-      var err = doc.getElementById("error").textContent;
-      result.textContent = "running " + ((performance.now() - started) / 1000).toFixed(0) + " s: " + status + (err ? " | " + err : "");
+      var err = doc.getElementById("error").textContent, hint = doc.getElementById("hint").textContent;
+      if (hint) window.sawHint = hint;
+      result.textContent = "running " + ((performance.now() - started) / 1000).toFixed(0) + " s: " + status +
+        (hint ? " | hint: " + hint : "") + (err ? " | " + err : "");
       if (q.get("pass") && !passTyped && doc.getElementById("passWrap").style.display === "block") {
         passTyped = true;
         doc.getElementById("passInput").value = q.get("pass");

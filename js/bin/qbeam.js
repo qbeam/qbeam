@@ -14,6 +14,7 @@ var pkgDir = path.resolve(__dirname, "..");
 var repoRoot = path.resolve(pkgDir, "..");
 var version = require(path.join(pkgDir, "package.json")).version;
 var QBeam3 = require(path.join(pkgDir, "qbeam3.js"));
+var terminal = require(path.join(pkgDir, "terminal.js"));
 
 // Raw bytes the sender offers per second for each preset; must match web/sender_app.js and the Python CLI.
 var SPEEDS = { safe: 4 * 1251 * 10, fast: 6 * 1251 * 15, max: 6 * 1710 * 30 };
@@ -32,7 +33,7 @@ function asset(name) {
 }
 
 var USAGE = [
-  "usage: qbeam send <file|-> [--speed safe|fast|max] [--encrypt] [--name NAME] [--out page.html] [--no-open]",
+  "usage: qbeam send <file|-> [--speed safe|fast|max] [--encrypt] [--name NAME] [--out page.html] [--no-open] [--tty|--browser]",
   "       qbeam receive [--no-open]",
   "       qbeam --version",
   "Folders: use the Python version (uvx qbeam send <folder>).",
@@ -84,6 +85,28 @@ function openPath(p) {
   }
 }
 
+// Terminal mode when asked, or when there's evidently no browser to show a page in (same rule as the Python CLI).
+function wantTerminal(opts) {
+  if (opts.tty) return true;
+  if (opts.browser || !process.stdout.isTTY) return false;
+  if (process.env.SSH_CONNECTION || process.env.SSH_TTY) return true;
+  return process.platform === "linux" && !process.env.DISPLAY && !process.env.WAYLAND_DISPLAY;
+}
+
+// The terminal is the QR screen: let the user note the passphrase before codes replace it.
+function waitForEnter() {
+  console.log("             Note it now; it's cleared before the codes appear. Press Enter to start.");
+  return new Promise(function (resolve) {
+    var input;
+    try { input = process.stdin.isTTY ? process.stdin : fs.createReadStream(process.platform === "win32" ? "CON" : "/dev/tty"); }
+    catch (e) { input = null; }
+    if (!input) { setTimeout(resolve, 15000); return; }
+    var rl = require("readline").createInterface({ input: input });
+    rl.once("line", function () { rl.close(); if (input !== process.stdin) input.destroy(); resolve(); });
+    input.once("error", function () { rl.close(); setTimeout(resolve, 15000); });
+  });
+}
+
 async function send(opts) {
   var raw, name, label, outPath;
   if (opts.file === "-") {
@@ -108,6 +131,8 @@ async function send(opts) {
   if (passphrase !== null) { payload = await QBeam3.sealEnvelope(c.container, passphrase); flags = QBeam3.FLAG_ENCRYPTED; }
   var session = crypto.randomBytes(4).readUInt32BE(0);
 
+  var terminalMode = wantTerminal(opts);
+  if (terminalMode && !opts.out) outPath = null;
   var read = function (n) { return fs.readFileSync(asset(n), "utf8"); };
   var qbeam3Src = fs.readFileSync(path.join(pkgDir, "qbeam3.js"), "utf8");
   // replaceAll like Python's str.replace; function replacers because the inlined sources contain "$" sequences.
@@ -121,18 +146,31 @@ async function send(opts) {
     .replaceAll("/*__META__*/", function () { return jsonForScript({ filename: name, size: raw.length, encrypted: passphrase !== null }); })
     .replaceAll("/*__SPEED__*/", function () { return jsonForScript(opts.speed); })
     .replaceAll("/*__APP__*/", function () { return read("sender_app.js"); });
-  fs.writeFileSync(outPath, page);
+  if (outPath) fs.writeFileSync(outPath, page);
 
   var seconds = payload.length / (SPEEDS[opts.speed] * TYPICAL_EFFICIENCY);
   console.log("Input:       " + label + " (" + raw.length.toLocaleString("en-US") + " bytes)");
   console.log("Sending:     " + name + " as " + payload.length.toLocaleString("en-US") + " bytes (" + c.how +
               (passphrase !== null ? ", encrypted" : "") + ")");
-  console.log("Speed:       " + opts.speed + ", about " + Math.max(1, Math.round(seconds)) + " s with a good camera");
-  console.log("Sender page: " + outPath);
+  console.log("Speed:       " + opts.speed + (terminalMode ? ", terminal mode (a few KB/s; the browser sender is much faster)"
+                                                         : ", about " + Math.max(1, Math.round(seconds)) + " s with a good camera"));
+  if (outPath) console.log("Sender page: " + outPath);
   if (passphrase !== null) {
     console.log("");
     console.log("Passphrase:  " + passphrase);
     console.log("             Type it on the phone when asked. Don't show it on the screen the camera sees.");
+  }
+  if (terminalMode) {
+    if (passphrase !== null) await waitForEnter();
+    console.log("Receiver:    " + RECEIVER_URL + " on your phone");
+    await terminal.run(payload, flags, session, opts.speed, name, {
+      out: process.stdout,
+      size: function () { return [process.stdout.columns || 80, process.stdout.rows || 24]; },
+      sleep: function (ms) { return new Promise(function (r) { setTimeout(r, ms); }); },
+      qrcode: require(asset("qrcodegen.js")),
+    });
+    console.log("Stopped. If the phone didn't save the file yet, run the same command again.");
+    return;
   }
   console.log("");
   if (opts.noOpen || !openPath(path.resolve(outPath))) {
@@ -157,7 +195,7 @@ function main(argv) {
   if (command === "receive") return receive(rest.indexOf("--no-open") !== -1);
   if (command !== "send") fail("unknown command " + command);
 
-  var opts = { file: null, speed: "fast", encrypt: false, name: null, out: null, noOpen: false };
+  var opts = { file: null, speed: "fast", encrypt: false, name: null, out: null, noOpen: false, tty: false, browser: false };
   for (var i = 0; i < rest.length; i++) {
     var a = rest[i];
     if (a === "--speed") opts.speed = rest[++i];
@@ -165,12 +203,15 @@ function main(argv) {
     else if (a === "--name") opts.name = rest[++i];
     else if (a === "--out") opts.out = rest[++i];
     else if (a === "--no-open") opts.noOpen = true;
+    else if (a === "--tty") opts.tty = true;
+    else if (a === "--browser") opts.browser = true;
     else if (a.slice(0, 2) === "--") fail("unknown option " + a);
     else if (opts.file === null) opts.file = a;
     else fail("unexpected argument " + a);
   }
   if (!opts.file) fail("missing file (or - for stdin)");
   if (!SPEEDS[opts.speed]) fail("--speed must be safe, fast or max");
+  if (opts.tty && opts.browser) fail("--tty and --browser can't be combined");
   send(opts).catch(function (e) { console.error("qbeam: error: " + e.message); process.exit(1); });
 }
 

@@ -17,7 +17,8 @@ cat trace.txt | npx qbeam send - --name trace.txt
 Options: `--speed safe|fast|max` (default fast; max needs a 60 fps phone camera), `--encrypt` (prints a passphrase
 to type on the phone; never shown on the QR screen), `--name` and `-` for stdin, `--no-open`.
 
-Folders: use the Python version, `uvx qbeam send myfolder` (sent as one `.tar.xz`).
+Over SSH or without a browser, `--tty` draws the codes in the terminal (automatic over SSH and on Linux without a
+display; slower than the browser page). Folders: use the Python version, `uvx qbeam send myfolder` (one `.tar.xz`).
 
 This package also exports the protocol v3 codec: `require("qbeam")` returns `{ Encoder, Decoder, encodeCode, parseCode, ... }`.
 

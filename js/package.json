@@ -27,6 +27,7 @@
     "bin/",
     "assets/",
     "qbeam3.js",
+    "terminal.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],

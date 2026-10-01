@@ -56,34 +56,55 @@ function paint(frameText) {
   var opts = { formats: "QRCode", tryHarder: true, tryRotate: false, tryInvert: false, tryDownscale: false, tryDenoise: false,
     binarizer: 0, isPure: false, downscaleFactor: 3, downscaleThreshold: 500, minLineCount: 2, maxNumberOfSymbols: 16,
     validateOptionalChecksum: false, returnErrors: false, eanAddOnSymbol: 0, textMode: 2, characterSet: 0, tryCode39ExtendedMode: true };
-  var res = JSON.parse(execFileSync(python, ["-c", script], { maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }));
-  var frames = res.text.split("\x1b[H").slice(1).filter(function (f) { return f.indexOf("█") >= 0 || f.indexOf("▀") >= 0; });
-  var dec = null, codes = 0;
-  frames.forEach(function (f) {
-    var img = paint(f), ptr = zx._malloc(img.luma.length);
-    zx.HEAPU8.set(img.luma, ptr);
-    var v = zx.readBarcodesFromPixmap(ptr, img.width, img.height, opts);
-    for (var i = 0; i < v.size(); i++) {
-      var r = v.get(i);
-      if (!r.isValid) continue;
-      var p = Q.parseCode(new Uint8Array(r.bytes));
-      if (!p || p.error) continue;
-      codes++;
-      if (!dec) dec = new Q.Decoder(p.L, p.T);
-      dec.add(p.esi, p.symbol);
+  // Decodes one sender's terminal output the way a camera would and checks it rebuilds `data`.
+  function check(label, text, data) {
+    var frames = text.split("\x1b[H").slice(1).filter(function (f) { return f.indexOf("█") >= 0 || f.indexOf("▀") >= 0; });
+    var dec = null, codes = 0;
+    frames.forEach(function (f) {
+      var img = paint(f), ptr = zx._malloc(img.luma.length);
+      zx.HEAPU8.set(img.luma, ptr);
+      var v = zx.readBarcodesFromPixmap(ptr, img.width, img.height, opts);
+      for (var i = 0; i < v.size(); i++) {
+        var r = v.get(i);
+        if (!r.isValid) continue;
+        var p = Q.parseCode(new Uint8Array(r.bytes));
+        if (!p || p.error) continue;
+        codes++;
+        if (!dec) dec = new Q.Decoder(p.L, p.T);
+        dec.add(p.esi, p.symbol);
+      }
+      zx._free(ptr);
+    });
+    if (!dec || !dec.complete()) {
+      console.log("FAIL " + label + ": " + codes + " codes from " + frames.length + " frames, " + (dec ? dec.rank + "/" + dec.lay.K : "none") + " blocks");
+      return false;
     }
-    zx._free(ptr);
+    var ct = Q.parseContainer(dec.payload());
+    var saved = ct.encoding === "gzip" ? require("zlib").gunzipSync(Buffer.from(ct.data)) : Buffer.from(ct.data);
+    if (Buffer.compare(saved, data) !== 0) { console.log("FAIL " + label + ": rebuilt file differs"); return false; }
+    if (crypto.createHash("sha256").update(saved).digest("hex") !== Buffer.from(ct.sha256).toString("hex")) {
+      console.log("FAIL " + label + ": sha256 mismatch"); return false;
+    }
+    console.log("ok   " + label + ": " + codes + " codes from " + frames.length + " frames rebuilt " +
+                Buffer.from(ct.filenameUtf8).toString("utf8") + " (" + saved.length + " bytes)");
+    return true;
+  }
+
+  // Python terminal sender.
+  var res = JSON.parse(execFileSync(python, ["-c", script], { maxBuffer: 256 * 1024 * 1024, encoding: "utf8" }));
+  var ok = check("python terminal frames decoded by zxing", res.text, Buffer.from(res.data, "hex"));
+
+  // Node terminal sender (js/terminal.js), same fake terminal.
+  var data = crypto.randomBytes(6000), out = "", frames = 0;
+  var sha = new Uint8Array(crypto.createHash("sha256").update(data).digest());
+  var container = Q.encodeContainer(new Uint8Array(Buffer.from("node.bin")), "raw", sha, new Uint8Array(data));
+  await require("../terminal.js").run(container, 0, 0xC0FFEE, "fast", "node.bin", {
+    out: { write: function (t) { out += t; } },
+    size: function () { return [COLS, ROWS]; },
+    sleep: function () { frames++; return Promise.resolve(); },
+    shouldStop: function () { return frames >= FRAMES; },
+    qrcode: require("../../web/vendor/qrcodegen.js"),
   });
-  if (!dec || !dec.complete()) {
-    console.log("FAIL terminal decode: " + codes + " codes from " + frames.length + " frames, " + (dec ? dec.rank + "/" + dec.lay.K : "none") + " blocks");
-    process.exit(1);
-  }
-  var ct = Q.parseContainer(dec.payload());
-  var saved = ct.encoding === "gzip" ? require("zlib").gunzipSync(Buffer.from(ct.data)) : Buffer.from(ct.data);
-  if (saved.toString("hex") !== res.data) { console.log("FAIL terminal decode: rebuilt file differs"); process.exit(1); }
-  if (crypto.createHash("sha256").update(saved).digest("hex") !== Buffer.from(ct.sha256).toString("hex")) {
-    console.log("FAIL terminal decode: sha256 mismatch"); process.exit(1);
-  }
-  console.log("ok   terminal frames decoded by zxing: " + codes + " codes from " + frames.length + " frames rebuilt " +
-              Buffer.from(ct.filenameUtf8).toString("utf8") + " (" + saved.length + " bytes)");
+  ok = check("node terminal frames decoded by zxing", out, data) && ok;
+  if (!ok) process.exit(1);
 })().catch(function (e) { console.log("FAIL terminal decode: " + e.message); process.exit(1); });

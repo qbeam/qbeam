@@ -123,7 +123,7 @@ Development
 - [x] P2.5 (done 2026-10-01: web/dist/decoder.html, single offline file, zxing WASM worker pool, Y-plane copy with fallbacks, min resolution/fps constraints, camera picker) Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR. Spike-proven recipe: WebCodecs VideoFrame → native-format luma plane → zxing `readBarcodesFromPixmap` in a worker pool, tryHarder on, `min` resolution constraints, canvas fallback; recommend Chrome on Android
 - [x] P2.6 (done 2026-10-01: amber hint when under half the codes in the last 5 s were caught, suggesting framing, glare and 'safe' speed) Receiver hint: decoder shows "missing X% of frames — try `--speed safe`" when its drop rate is high
 - [x] P2.7 (decided 2026-10-01: no v2 decoding; the receiver tells users to regenerate old pages (0.0.1 had almost no users)) Keep v2 text frames decodable (backward compatibility) for one release
-- [ ] P2.8 (send on v3 done 2026-10-01 (single files, stdin, --encrypt); Node terminal renderer still to do) npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
+- [x] P2.8 (done 2026-10-01: npx qbeam send on v3 incl. --encrypt; terminal mode js/terminal.js mirrors Python, decoded by zxing in CI) (send on v3 done 2026-10-01 (single files, stdin, --encrypt); Node terminal renderer still to do) npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
 - [ ] P2.9 Hosted web decoder as an installable offline PWA; also downloadable single HTML
 - [x] P2.10 (done 2026-10-01: --encrypt with generated or QBEAM_PASSPHRASE passphrase printed only in the terminal; receiver prompts and decrypts) Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it. Codec done (P0.6); remaining: CLI flag (generate a passphrase and print it in the terminal, never on the QR screen), receiver prompt, friendly error when `cryptography` is missing
 
@@ -253,6 +253,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · Released 0.1.0 (PyPI, npm via trusted publishing, GitHub release with .pyz). Receiver: 1 GiB gunzip cap (P1.13), catch-rate hint (P2.3/P2.6). qbeam.dev live on GitHub Pages (landing + offline receiver PWA at /r); DNS on Cloudflare set to DNS-only, waiting for GitHub's certificate. npm CLI terminal mode (P2.8) · Next: enforce HTTPS once the cert is issued; then P2 remaining (P2.9 done pending cert, P2.11–16 tests/bench) or P3 Android
 
 - 2026-10-01 · Terminal mode: own pure-Python QR encoder (identical to qrcodegen.js on 19 vectors), half-block renderer with layout by payload per frame, auto over SSH / no display, passphrase shown before codes. zxing decodes painted terminal frames back to the file (CI). Single-file qbeam.pyz (591 KB) built and run on 3 OSes in CI, attached to releases. Windows CI fix: LF line endings pinned · Next: user decides on 0.1.0 release; then P1.16–19 checks, P1.20–22 launch prep
 

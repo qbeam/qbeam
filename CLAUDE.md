@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P1 (in progress); P0 done except user items
-- **Last done:** terminal mode (own QR encoder + half-block renderer) and single-file qbeam.pyz, both tested end to end (2026-10-01)
-- **Next up:** ask the user about releasing 0.1.0 (first v3 release); then manual checks P1.16–19 (Windows console, locked-down VM, real phone), P1.13 decompression cap, launch prep P1.20–22. P0.2 code of conduct and P0.12 benchmark still open (user)
+- **Last done:** 0.1.0 released; qbeam.dev hosting (GitHub Pages, DNS-only on Cloudflare); receiver catch-rate hint and gunzip cap; npm terminal mode (2026-10-01)
+- **Next up:** once GitHub issues the qbeam.dev certificate, enforce HTTPS (gh api -X PUT repos/qbeam/qbeam/pages -F https_enforced=true); then P2.11–16 (loss/fuzz/bench tests) or P3 Android. User items: phone test of 0.1.0, Windows console --tty, P0.2, P0.12
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
@@ -34,7 +34,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 | `py/encode.py` | Shim: `python3 py/encode.py <path> [opts]` = `qbeam send` from a checkout |
 | `py/pyproject.toml`, `py/sync_assets.py` | PyPI packaging (extra `crypto`); `sync_assets.py` copies web/js assets into the package at release time |
 | `js/qbeam3.js` | Protocol v3 reference codec (also the npm package's `main`) |
-| `js/bin/qbeam.js` | npm CLI on v3: single files and stdin, same options as Python except folders |
+| `js/bin/qbeam.js`, `js/terminal.js` | npm CLI on v3: single files and stdin, same options as Python except folders; terminal mode mirrors Python's |
+| `site/`, `scripts/build_site.py`, `.github/workflows/pages.yml` | qbeam.dev: landing page + receiver at /r as an offline web app (manifest, service worker, drawn icons) |
 | `js/fountain.js` | Old v2 codec, kept only as the reference for `protocol/test-vectors/v2.json` |
 | `web/sender_shell.html`, `web/sender_app.js` | v3 sender page: grid of codes, presets safe/fast/max, fixed mask |
 | `web/decoder_*.{html,js}`, `web/decode_worker.js` | v3 receiver: camera → zxing WASM workers (Y-plane copy) → decode → decrypt → SHA-256 → save |

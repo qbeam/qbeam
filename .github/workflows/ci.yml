@@ -76,7 +76,7 @@ jobs:
 
   kotlin:
     # qbeam-core, the Android app's protocol codec, against the shared vectors.
-    name: Android codec (core)
+    name: Android (core tests + app build)
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -87,6 +87,11 @@ jobs:
       - name: gradle test
         working-directory: android
         run: ./gradlew :core:test --console=plain
+      - name: Android SDK platform 36
+        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Build the app (debug APK)
+        working-directory: android
+        run: ./gradlew :app:assembleDebug --console=plain
 
   optics:
     # Real sender frames through a simulated phone camera, decoded by the receiver's zxing build. Fails when a

@@ -10,4 +10,14 @@ Native Android receiver (PLAN P3): CameraX + zxing-cpp, Play Billing one-time un
   cd android && ./gradlew :core:test
   ```
 
-- The app module comes next, once Android Studio (which provides the JDK and SDK) is installed.
+- [`app/`](app/) — the receiver: CameraX (1080p, up to 60 fps) → zxing-cpp reading the luma plane natively →
+  `Receiver` on its own thread → Compose UI; files save to Downloads/qbeam. Not yet: billing and the free-transfer
+  limit, phone-to-laptop sending.
+
+  ```bash
+  cd android && ./gradlew :app:assembleDebug          # app/build/outputs/apk/debug/app-debug.apk
+  adb install -r app/build/outputs/apk/debug/app-debug.apk
+  ```
+
+Versions: AGP 8.13.2, Kotlin 2.3.20, compileSdk 36, CameraX 1.5.2 (what zxing-cpp 3.1.1 is built against), Compose
+BOM 2025.10.01 (the last one for compileSdk 36 / AGP 8). Newer AndroidX needs AGP 9 and compileSdk 37.

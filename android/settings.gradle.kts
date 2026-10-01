@@ -1,5 +1,5 @@
 // qbeam Android. `core` is the protocol v3 codec (pure Kotlin/JVM, tested against protocol/test-vectors);
-// the app module is added once Android Studio is installed on the dev machine.
+// `app` is the receiver app (CameraX + zxing-cpp + Compose).
 pluginManagement {
     repositories {
         gradlePluginPortal()
@@ -14,4 +14,4 @@ dependencyResolutionManagement {
     }
 }
 rootProject.name = "qbeam"
-include(":core")
+include(":core", ":app")

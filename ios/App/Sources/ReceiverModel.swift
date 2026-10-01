@@ -72,8 +72,8 @@ final class ReceiverModel: ObservableObject {
             let file = try receiver.finish(s, passphrase: passphrase)
             let url = try Self.store(file)
             pending = nil
-            // From the first code to the last, counting the bytes on screen (compressed).
-            let sec = Date().timeIntervalSince1970 - s.started
+            // From the first code to the last needed one (not passphrase typing), counting the bytes on screen.
+            let sec = (s.completedAt ?? Date().timeIntervalSince1970) - s.started
             let took = sec < 0.5 ? "" : " in \(Int(sec)) s at \(Self.size(Int(Double(s.L) / sec)))/s"
             Task { @MainActor in
                 self.needsPassphrase = false; self.hint = nil; self.progress = 1
@@ -98,13 +98,23 @@ final class ReceiverModel: ObservableObject {
     /// Writes into Documents (visible in the Files app), never overwriting an existing file.
     nonisolated static func store(_ file: Receiver.Saved) throws -> URL {
         let docs = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask)[0]
-        let base = (file.filename as NSString).deletingPathExtension, ext = (file.filename as NSString).pathExtension
+        let (base, ext) = splitExtension(file.filename)
         var url = docs.appendingPathComponent(file.filename), n = 2
         while FileManager.default.fileExists(atPath: url.path) {
-            url = docs.appendingPathComponent(ext.isEmpty ? "\(base) \(n)" : "\(base) \(n).\(ext)"); n += 1
+            url = docs.appendingPathComponent("\(base) \(n)\(ext)"); n += 1   // "logs 2.tar.gz", like Finder
         }
         try Data(file.bytes).write(to: url, options: .atomic)
         return url
+    }
+
+    /// "logs.tar.gz" → ("logs", ".tar.gz"); "notes" → ("notes", ""). Compound archive extensions stay together.
+    nonisolated static func splitExtension(_ name: String) -> (String, String) {
+        let lower = name.lowercased()
+        for compound in [".tar.gz", ".tar.xz", ".tar.bz2", ".tar.zst"] where lower.hasSuffix(compound) && lower.count > compound.count {
+            return (String(name.dropLast(compound.count)), String(name.suffix(compound.count)))
+        }
+        let ext = (name as NSString).pathExtension
+        return ext.isEmpty ? (name, "") : ((name as NSString).deletingPathExtension, "." + ext)
     }
 
     nonisolated static func size(_ b: Int) -> String {

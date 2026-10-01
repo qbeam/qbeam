@@ -153,9 +153,10 @@ class Controller(private val context: Context, private val ui: UiState) {
         }
     }
 
-    /** " in 28 s at 271 KB/s": from the first code to the last, counting the bytes on screen (compressed). */
+    /** " in 28 s at 271 KB/s": from the first code to the last needed one (not passphrase typing), counting the
+     *  bytes on screen (compressed). */
     private fun took(s: Receiver.Session): String {
-        val sec = (System.currentTimeMillis() - s.started) / 1000.0
+        val sec = ((s.completedAt ?: System.currentTimeMillis()) - s.started) / 1000.0
         return if (sec < 0.5) "" else " in ${sec.toInt()} s at ${size((s.L / sec).toLong())}/s"
     }
 

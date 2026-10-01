@@ -1,0 +1,1 @@
+Receive files from a computer screen over animated QR codes. No network needed.

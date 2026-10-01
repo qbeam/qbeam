@@ -1,0 +1,1 @@
+qr,file transfer,offline,terminal,ssh,developer,cli,qr code,send file,receive,camera,python,npm

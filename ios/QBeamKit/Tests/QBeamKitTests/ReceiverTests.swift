@@ -88,6 +88,17 @@ func receive(_ rx: Receiver, _ clock: FakeClock, _ all: [[UInt8]], loss: Double 
     #expect(try rx.finish(s3, passphrase: "pass").bytes == data)
 }
 
+@Test func completedAtIsTheLastNeededCodeNotTheSave() throws {
+    let clock = FakeClock(), rx = Receiver(clock: { clock.now })
+    let data = (0..<5000).map { _ in UInt8.random(in: 0...255) }
+    let s = try #require(receive(rx, clock, codes(Container(encoding: .raw, filename: "t", sha256: sha(data), data: data).encoded(), session: 7)))
+    let done = clock.now
+    #expect(s.completedAt == done)
+    clock.now += 60                       // the user takes a minute (typing a passphrase, say)
+    _ = try rx.finish(s)
+    #expect(s.completedAt == done && done > s.started)
+}
+
 @Test func receiverCatchesMisreadAndBomb() throws {
     let clock = FakeClock(), rx = Receiver(clock: { clock.now })
     let data = (0..<5000).map { _ in UInt8.random(in: 0...255) }

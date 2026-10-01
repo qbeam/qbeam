@@ -58,6 +58,8 @@ jobs:
           node protocol/test-vectors/generate.js
           node protocol/test-vectors/generate_v3.js
           git diff --exit-code protocol/test-vectors/ || { echo "::error::The reference codecs (js/fountain.js, js/qbeam3.js) no longer match protocol/test-vectors/. Regenerate only for a deliberate, documented protocol change."; exit 1; }
+      - name: Store listing text fits Play and App Store limits
+        run: python3 scripts/check_store.py
       - name: Rebuild web/dist/decoder.html
         run: python3 web/build.py
       - name: Fail if the committed copy is stale

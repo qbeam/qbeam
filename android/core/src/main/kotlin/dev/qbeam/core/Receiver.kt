@@ -21,6 +21,8 @@ class Receiver(
         internal var lastNew = started
         internal val recent = ArrayDeque<Pair<Long, Long>>() // (time, esi) of codes not seen before, for the hint
         var finished = false; internal set
+        /** When the last needed code arrived (clock ms): the transfer's end, before any passphrase or saving. */
+        var completedAt: Long? = null; internal set
         val encrypted get() = flags and QBeam3.FLAG_ENCRYPTED != 0
         val progress get() = decoder.rank.toDouble() / decoder.layout.K
         val isComplete get() = decoder.isComplete
@@ -65,7 +67,9 @@ class Receiver(
         val fresh = s.decoder.add(c.esi, c.symbol)
         if (fresh || !s.recent.any { it.second == c.esi }) s.recent.addLast(now to c.esi)
         if (fresh) s.lastNew = now
-        return if (s.isComplete) Event.Complete(s) else Event.Progress(s)
+        if (!s.isComplete) return Event.Progress(s)
+        s.completedAt = now
+        return Event.Complete(s)
     }
 
     /** Share of codes caught over the last few seconds (senders number codes consecutively), or null if too early. */

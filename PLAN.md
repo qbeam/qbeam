@@ -162,7 +162,7 @@ User (accounts and money)
 Claude
 - [x] B.5 (done 2026-10-02) Release CLI 0.2.0 (unreleased fixes since 0.1.0)
 - [x] B.6 (done 2026-10-02; support = GitHub issues for now) Privacy page at qbeam.dev/privacy (no data collected, camera used on-device only) and a support page
-- [ ] B.7 Store copy: offline file transfer between your own devices; never framed as getting around security; screenshots from both phones
+- [x] B.7 (done 2026-10-02: store/ in fastlane layout, length check in CI, 3 captioned screenshots per store from real transfers) Store copy: offline file transfer between your own devices; never framed as getting around security; screenshots from both phones
 - [ ] B.8 Android release signing: upload key kept outside the repo (+ CI secret), Play App Signing, `bundleRelease` AAB in CI
 - [ ] B.9 iOS archive + upload (Release, automatic signing) and a CI build of the archive
 - [ ] B.10 App icons and launch assets at store sizes; version/build numbers synced with scripts/version.py
@@ -277,6 +277,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-02 · Store copy + screenshots (B.7): Play and App Store text in store/ (fastlane layout, CI length check), 3 captioned screenshots per store from real iPhone 15 / OnePlus 12 transfers. Fixed two app bugs found while capturing: Saved-line speed included passphrase typing (now ends at the last needed code; tests in Kotlin + Swift), and iOS copy names split .tar.gz (now "name 2.tar.gz") · Next: B.10 icons at store sizes, B.8/B.9 signing + CI bundles, B.11 trial behind a switch; user: Play + Apple accounts
 - 2026-10-02 · Released 0.2.0 (PyPI, npm, GitHub with .pyz). Terminal mode tested to phone. Chose Option A: free betas on Play closed test + TestFlight now, trial/unlock built behind a switch and shipped after Gate 2 (rule and Gate 2 wording updated; Beta release track B.1–B.12 added). Privacy page at qbeam.dev/privacy · Next: user creates Play + Apple accounts (B.1/B.2); Claude: store copy, signing, CI bundles (B.7–B.10)
 - 2026-10-01 · Android on a OnePlus 12: ~140 KB/s at first (CameraX picked 1920×1440, one decode thread); with 16:9 1080p and a 4-worker zxing pool it reached 288 KB/s for 7.6 MB in 8 s, even though the camera only offers apps 30 fps. Both apps now show time and KB/s on the Saved line. iPhone 15: 277 KB/s · Next: trial counter + billing (P3.7/P3.8, P4.2), phone → laptop sending; competitor baseline (P0.12) to confirm parity
 - 2026-10-01 · iOS speed: Vision decoded ~5 frames/s (~750 ms each) → ~45 KB/s; switched to zxing-cpp worker pool (60 fps in, ~12 ms/frame, ~350 codes/s) → 277 KB/s on iPhone 15 vs 246 KB/s for the web receiver. Fixed 30 fps cap (.inputPriority) and an assert() crash in zxing's QR sampler (vendored zxing-cpp 3.1.1 with NDEBUG) · Next: confirm no crashes over several transfers, then Android on a real phone

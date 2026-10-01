@@ -1,0 +1,30 @@
+qbeam moves a file from a computer screen to your iPhone using a stream of QR codes. Run one command on the computer, point your iPhone at the screen, and the file arrives, checked byte for byte.
+
+No network connection between the two devices, no cable, no AirDrop and no account. The computer only needs to show a web page or a terminal window, so it works with Windows and Linux machines too.
+
+HOW IT WORKS
+1. On the computer, run: uvx qbeam send report.pdf (or npx qbeam send report.pdf). Nothing needs admin rights to install.
+2. Open qbeam on your iPhone and point the camera at the codes.
+3. The file is saved in the Files app (On My iPhone › qbeam) once it's complete and its SHA-256 checksum matches. Share it to any app from there.
+
+WHERE IT HELPS
+• Cloud shells, remote desktops and virtual machines that can show a screen but can't easily share a file with your phone
+• Lab machines, kiosks and shared computers
+• Getting a log, a config file or a build artifact onto your iPhone in seconds
+
+FAST
+• Up to ~280 KB/s measured on iPhone 15 with the sender's "max" setting: a 2 MB photo in about 8 seconds. Text and logs are compressed first, so they go faster
+• The camera runs at 60 frames a second and a grid of QR codes is read in parallel
+• A fountain code: a missed frame never means waiting for the loop to come round again
+
+FOR DEVELOPERS
+• Terminal mode: over SSH or without a browser, the codes are drawn right in the terminal
+• Send a folder as one archive (respects .gitignore), or pipe in stdin
+• Optional encryption: AES-256-GCM with a passphrase you type on the iPhone
+
+PRIVATE BY DESIGN
+• The app makes no network connections. Nothing you receive leaves your iPhone
+• No account, no analytics, no ads
+• Open source (Apache-2.0): github.com/qbeam/qbeam
+
+Anyone who can see the sending screen can read an unencrypted transfer. Use encryption for anything sensitive, and only move data you're authorised to move.

@@ -13,6 +13,8 @@ public final class Receiver {
         var lastNew: TimeInterval
         var recent: [(t: TimeInterval, esi: UInt32)] = []
         public internal(set) var finished = false
+        /// When the last needed code arrived (clock time): the transfer's end, before any passphrase or saving.
+        public internal(set) var completedAt: TimeInterval?
         public var encrypted: Bool { flags & QBeam3.flagEncrypted != 0 }
         public var progress: Double { Double(decoder.rank) / Double(decoder.layout.K) }
         public var isComplete: Bool { decoder.isComplete }
@@ -67,7 +69,9 @@ public final class Receiver {
         let fresh = s.decoder.add(esi: c.esi, symbol: c.symbol)
         if fresh || !s.recent.contains(where: { $0.esi == c.esi }) { s.recent.append((now, c.esi)) }
         if fresh { s.lastNew = now }
-        return s.isComplete ? .complete(s) : .progress(s)
+        guard s.isComplete else { return .progress(s) }
+        s.completedAt = now
+        return .complete(s)
     }
 
     /// Share of codes caught over the last few seconds (senders number codes consecutively), or nil if too early.

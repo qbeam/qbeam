@@ -1,0 +1,1 @@
+First beta: receive files from the qbeam sender on your computer, at up to ~280 KB/s.

@@ -36,6 +36,17 @@ class ReceiverTest {
         error("did not complete")
     }
 
+    @Test fun completedAtIsTheLastNeededCodeNotTheSave() {
+        val data = Random.nextBytes(5_000)
+        val s = receive(codes(Container(Container.RAW, "t.bin", sha(data), data).encoded(), 7))
+        assertEquals(now, s.completedAt)
+        val done = now
+        now += 60_000 // the user takes a minute (typing a passphrase, say)
+        rx.finish(s)
+        assertEquals(done, s.completedAt)
+        assertTrue(s.completedAt!! > s.started)
+    }
+
     @Test fun plainAndGzipTransfersVerify() {
         val data = Random.nextBytes(20_000)
         val s = receive(codes(Container(Container.RAW, "a.bin", sha(data), data).encoded(), 1), loss = 0.3)

@@ -1,0 +1,32 @@
+qbeam moves a file from a computer screen to your phone using a stream of QR codes. Run one command on the computer, point your phone at the screen, and the file arrives, checked byte for byte.
+
+No network connection between the two devices, no USB cable, no Bluetooth pairing and no account. The computer only needs to show a web page or a terminal window.
+
+HOW IT WORKS
+1. On the computer, run: uvx qbeam send report.pdf (or npx qbeam send report.pdf). Nothing needs admin rights to install.
+2. Open qbeam on your phone and point the camera at the codes.
+3. The file is saved to Downloads/qbeam once it's complete and its SHA-256 checksum matches.
+
+WHERE IT HELPS
+• Cloud shells, remote desktops and virtual machines that can show a screen but can't easily share a file with your phone
+• Lab machines, kiosks and computers without your phone's cable or apps
+• Getting a log, a config file or a build artifact onto your phone in seconds
+
+FAST
+• Up to ~280 KB/s measured on a OnePlus 12 with the sender's "max" setting: a 2 MB photo in about 8 seconds. Text and logs are compressed first, so they go faster
+• A grid of QR codes read in parallel on the phone, at up to 60 frames a second where the camera allows
+• A fountain code: a missed frame never means waiting for the loop to come round again
+
+FOR DEVELOPERS
+• Terminal mode: over SSH or without a browser, the codes are drawn right in the terminal
+• Send a folder as one archive (respects .gitignore), or pipe in stdin
+• Optional encryption: AES-256-GCM with a passphrase you type on the phone
+
+PRIVATE BY DESIGN
+• The app doesn't request internet access. Nothing you receive leaves your phone
+• No account, no analytics, no ads
+• Open source (Apache-2.0): github.com/qbeam/qbeam
+
+Anyone who can see the sending screen can read an unencrypted transfer. Use encryption for anything sensitive, and only move data you're authorised to move.
+
+Privacy policy: https://qbeam.dev/privacy/

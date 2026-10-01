@@ -63,3 +63,7 @@ android/local.properties
 android/.idea/
 *.iml
 ios/App/Info.plist
+
+# Private planning notes: kept locally, never published
+PLAN.md
+CLAUDE.md

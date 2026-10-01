@@ -16,8 +16,8 @@ the App Store) so uploads can be automated later.
   that script.
 
 Copy rules: describe moving files between your own devices, offline. Never frame qbeam as a way around security or
-monitoring (CLAUDE.md). Speeds quoted are measured ones (iPhone 15 and OnePlus 12, `--speed max`, a file that doesn't
-compress); don't claim "fastest" until the competitor baseline (PLAN.md P0.12 / P3.16) is measured. When billing ships
+monitoring. Speeds quoted are measured ones (iPhone 15 and OnePlus 12, `--speed max`, a file that doesn't
+compress); don't claim "fastest" until the competitor baseline is measured. When billing ships
 (trial switch on), both descriptions must mention the 10 free transfers and the one-time unlock, and Play's data-safety
 form should be answered for Play Billing (purchase history is handled by Google, not by us).
 

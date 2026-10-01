@@ -18,7 +18,7 @@ uvx qbeam send report.pdf
 Then point your phone at the codes, with [qbeam.dev/r](https://qbeam.dev/r) open or the [Android app](#receive). The
 file arrives once it's complete and verified.
 
-> Early alpha. Plan and progress: [PLAN.md](PLAN.md).
+> Early alpha: expect rough edges, and please report them as issues.
 
 ## Install
 

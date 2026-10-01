@@ -1,4 +1,4 @@
-// The free trial: 10 completed transfers, then a one-time unlock (PLAN.md P3.7). Platform-free so it's unit-tested;
+// The free trial: 10 completed transfers, then a one-time unlock. Platform-free so it's unit-tested;
 // mirrors android/core Trial.kt. The app supplies storage and the store purchase.
 import Foundation
 

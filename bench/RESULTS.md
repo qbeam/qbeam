@@ -2,7 +2,7 @@
 
 Goodput = unique payload bytes received per second. Newest first within each section.
 
-## P0.13 speed spike
+## Speed spike
 
 ### Offline (no camera), 2026-10-01
 
@@ -62,13 +62,13 @@ phone), so crop tracking only pays off when codes cover a small part of the fram
 
 ### Camera runs
 
-**Verdict (2026-10-01): plain QR reaches competitor speed in a browser. P0.13 answered; no colour fallback needed.**
+**Verdict (2026-10-01): plain QR reaches competitor speed in a browser. no colour fallback needed.**
 
 **Best so far: 246 KB/s average, 293 KB/s best 5 s** — iPhone, Chrome (WebKit), 3x2 v30-L at 30 fps, camera 58 fps. Android best: 203 / 267 at the same settings with the camera stuck at 30 fps.
 
 Chrome on a mid-range Android phone, 1080p camera at 60 fps, decoded a 3x2 grid of v30-L codes shown at 15 fps at
 **128 KB/s average, 149 KB/s best 5 s** (84% of codes recovered). Competitors report ~100 KB/s (cimbar) and
-~129 KB/s (Decimen); those still need measuring on this same setup (P0.12).
+~129 KB/s (Decimen); those still need measuring on this same setup.
 
 What it took, in order of impact:
 
@@ -81,7 +81,7 @@ What it took, in order of impact:
 
 Caveats: raw channel only (unique code bytes), not yet through the fountain code; one phone, one screen, one
 room; phone model unknown. Per-code headers and fountain overhead should cost a few percent. At this rate a
-10 MB file is ~6,000 symbols, so the dense GF(2) decoder (O(K²)) must be replaced (P0.5a).
+10 MB file is ~6,000 symbols, so the dense GF(2) decoder (O(K²)) must be replaced.
 
 Use `bench/spike/README.md`; paste each receiver "Copy result" JSON here with phone model and notes.
 

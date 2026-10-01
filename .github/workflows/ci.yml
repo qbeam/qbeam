@@ -121,7 +121,7 @@ jobs:
 
   optics:
     # Real sender frames through a simulated phone camera, decoded by the receiver's zxing build. Fails when a
-    # change makes codes harder to read (PLAN P2.13 / P2.15a).
+    # change makes codes harder to read.
     name: simulated camera
     runs-on: ubuntu-latest
     steps:

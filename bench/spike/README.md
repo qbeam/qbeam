@@ -1,4 +1,4 @@
-# Speed spike (PLAN P0.13)
+# Speed spike
 
 Question: can plain QR codes reach competitor speed (~100–130 KB/s goodput) screen-to-phone?
 This is throwaway prototype code: no fountain code, no files, just the raw channel. Each QR code carries random

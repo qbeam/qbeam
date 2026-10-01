@@ -1,4 +1,4 @@
-// P0.5a: segmented dense fountain code, segment size (KMAX) trade-off.
+// Segmented dense fountain code, segment size (KMAX) trade-off.
 // Simulates the sender's ESI order with random code loss and measures: symbols needed / K (overhead),
 // receiver decode time, and sender cost per repair symbol.    node bench/protocol/fountain_v3.js
 "use strict";

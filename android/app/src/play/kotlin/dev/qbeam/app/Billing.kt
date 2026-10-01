@@ -1,4 +1,4 @@
-// Google Play Billing for the one-time unlock (PLAN.md P3.8). Used only when the trial switch is on (BuildConfig.TRIAL).
+// Google Play Billing for the one-time unlock. Used only when the trial switch is on (BuildConfig.TRIAL).
 // There's no server: the app trusts Play's purchase records on the device and caches the result in Trial, so the
 // unlock keeps working offline. Play Billing talks to the Play Store app over IPC; the app still has no internet access.
 package dev.qbeam.app
@@ -21,7 +21,7 @@ class Billing(
     context: Context,
     /** Called (on a Billing thread) with whether the unlock is owned, after a refresh or a purchase. */
     private val onOwned: (Boolean) -> Unit,
-    /** Called with the store's localised price once known, e.g. "₹599.00" or "$6.99". */
+    /** Called with the store's localised price once known, e.g. "₹599.00". */
     private val onPrice: (String) -> Unit,
     /** Called with a short message when a purchase can't go ahead. */
     private val onError: (String) -> Unit,

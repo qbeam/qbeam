@@ -1,4 +1,4 @@
-// StoreKit 2 for the one-time unlock (PLAN.md P4.2). Used only when the trial switch is on (Info.plist QBeamTrial).
+// StoreKit 2 for the one-time unlock. Used only when the trial switch is on (Info.plist QBeamTrial).
 // There's no server: StoreKit verifies the signed transactions on the device, and the result is cached in Trial so the
 // unlock keeps working offline.
 import QBeamKit

@@ -15,7 +15,7 @@ final class ReceiverModel: ObservableObject {
     @Published var paywall = false           // free transfers used up and not unlocked
     @Published var price: String?
 
-    /// The trial switch (PLAN.md B.11): Info.plist QBeamTrial, from the QBEAM_TRIAL build setting (NO for betas).
+    /// The trial switch: Info.plist QBeamTrial, from the QBEAM_TRIAL build setting (NO for betas).
     nonisolated static let trialEnabled = (Bundle.main.object(forInfoDictionaryKey: "QBeamTrial") as? String) == "YES"
     private nonisolated let trial = Trial(store: UserDefaults.standard, enabled: ReceiverModel.trialEnabled)
     private var purchases: Purchases?

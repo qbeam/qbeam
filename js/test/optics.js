@@ -1,4 +1,4 @@
-// Simulated camera (PLAN P2.13 / P2.15a): real sender frames for each speed preset are photographed by a fake camera
+// Simulated camera: real sender frames for each speed preset are photographed by a fake camera
 // (tilted screen in perspective, scaled into 1920x1080, blur, reduced contrast, sensor noise) and decoded with the
 // receiver's own zxing build. Fails if any preset's code recovery drops below its floor, so a change that makes
 // codes harder to read is caught in CI before it reaches a phone.

@@ -1,4 +1,4 @@
-// PLAN P0.13, offline half: CPU cost of the sender and receiver for dense multi-code frames, no camera.
+// Speed spike, offline half: CPU cost of the sender and receiver for dense multi-code frames, no camera.
 //
 // For each config it renders a "screen" with a grid of QR codes (binary payloads), then simulates what a camera
 // sees: the screen scaled into a 1920x1080 capture (with optional blur), and times zxing-cpp (WASM) decoding it.

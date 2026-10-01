@@ -26,7 +26,7 @@ android {
     }
 
     // foss: GitHub releases, IzzyOnDroid, F-Droid. No Google libraries at all, no trial. The default.
-    // play: Google Play, with Play Billing and the trial switch (PLAN.md B.11): -Pqbeam.trial=true turns it on.
+    // play: Google Play, with Play Billing and the trial switch: -Pqbeam.trial=true turns it on.
     flavorDimensions += "store"
     productFlavors {
         create("foss") {

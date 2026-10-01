@@ -289,7 +289,7 @@ error-correction level and mode that decodes to the same text.
 
 - Base64 inside byte-mode QR wastes 25% of every frame.
 - The dense GF(2) code needs O(K²) work to decode, too slow for multi-MB payloads at high frame rates.
-- One small code per slot at ~3 slots/s gives about 0.8 KB/s at defaults; see PLAN P2 for the speed targets.
+- One small code per slot at ~3 slots/s gives about 0.8 KB/s at defaults.
 - No per-frame checksum beyond QR's own error correction; a misread symbol only shows up as a SHA-256 mismatch
   at the end, which costs the whole transfer.
 - The header takes 10% of slots and carries no protocol version beyond the prefix.

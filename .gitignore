@@ -49,3 +49,7 @@ web/test/tmp/
 
 # Built site (scripts/build_site.py)
 _site/
+
+# Swift package builds
+ios/**/.build/
+.swiftpm/

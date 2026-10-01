@@ -89,6 +89,10 @@ keytool -list -v -keystore ~/qbeam-release.jks -alias qbeam | grep SHA256   # th
 Without the secrets the job skips the APK with a warning; it never blocks the CLI release, and it refuses to publish
 an APK signed with the debug key.
 
+To attach the APK to the current version's existing release (e.g. one cut before the key existed), run
+`gh workflow run android-apk.yml`. Both workflows use `scripts/build_apk.sh`, which also checks that the APK's
+`versionName` matches the release.
+
 ### Local builds
 
 `./gradlew :app:assembleFossRelease` (in `android/`) signs with the debug key unless `QBEAM_KEYSTORE`,

@@ -1,0 +1,34 @@
+name: Android APK
+
+# Builds the signed APK for the current version (scripts/version.py) and attaches it to that version's existing GitHub
+# release. For releases cut before the APK job existed, or to re-attach one; normal releases get the APK from
+# release.yml. Run with: gh workflow run android-apk.yml
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  apk:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Android SDK platform 36
+        run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Build and sign the APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          QBEAM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+        run: |
+          [ -n "$KEYSTORE_B64" ] || { echo "::error::ANDROID_KEYSTORE_BASE64 is not set"; exit 1; }
+          scripts/build_apk.sh "$(python3 scripts/version.py)" apk-dist
+      - name: Attach to the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "v$(python3 scripts/version.py)" apk-dist/* --clobber --repo "$GITHUB_REPOSITORY"

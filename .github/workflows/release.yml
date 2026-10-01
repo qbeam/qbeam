@@ -103,24 +103,7 @@ jobs:
         env:
           KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
           QBEAM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          QBEAM_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
-          QBEAM_KEY_ALIAS: qbeam
-          VERSION: ${{ needs.plan.outputs.version }}
-        run: |
-          if [ -z "$KEYSTORE_B64" ]; then
-            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret, so no APK in this release (docs/RELEASING.md)"; exit 0
-          fi
-          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
-          export QBEAM_KEYSTORE="$RUNNER_TEMP/release.jks"
-          (cd android && ./gradlew :app:assembleFossRelease --console=plain)
-          apk=android/app/build/outputs/apk/foss/release/app-foss-release.apk
-          certs=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk")
-          echo "$certs"
-          if echo "$certs" | grep -q "CN=Android Debug"; then echo "::error::APK is signed with the debug key"; exit 1; fi
-          mkdir -p apk-dist
-          cp "$apk" "apk-dist/qbeam-$VERSION.apk"
-          (cd apk-dist && sha256sum "qbeam-$VERSION.apk" > "qbeam-$VERSION.apk.sha256")
-          rm -f "$RUNNER_TEMP/release.jks"
+        run: scripts/build_apk.sh "${{ needs.plan.outputs.version }}" apk-dist
       - uses: actions/upload-artifact@v4
         with:
           name: android-apk

@@ -66,13 +66,20 @@ jobs:
 
   swift:
     # QBeamKit, the iOS app's protocol codec, against the shared vectors.
-    name: iOS codec (QBeamKit)
+    name: iOS (QBeamKit tests + app build)
     runs-on: macos-latest
     steps:
       - uses: actions/checkout@v4
       - name: swift test
         working-directory: ios/QBeamKit
         run: swift test
+      - name: Build the iOS app for the Simulator
+        working-directory: ios/App
+        run: |
+          brew install xcodegen
+          xcodegen
+          xcodebuild -project QBeam.xcodeproj -scheme QBeam -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
 
   kotlin:
     # qbeam-core, the Android app's protocol codec, against the shared vectors.

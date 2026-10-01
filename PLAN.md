@@ -13,9 +13,9 @@ Product and command name: **qbeam** (chosen 2026-09-30; free on PyPI, npm, `.dev
 | --- | --- | --- | --- |
 | P0 Foundations | Oct 1–7, 2026 | Done except user items (P0.2 CoC, P0.10 handles/stores, P0.12 deferred) | Repo, spec draft, CI green on 3 OSes |
 | P1 Python CLI + terminal mode | Oct 8–31 | Mostly done: v3, terminal mode, .pyz; left: P1.4a, P1.13 cap, P1.16–19 install/manual checks, P1.20–22 marketing | **Gate 1:** installs and sends on macOS/Linux/Windows with no admin rights |
-| P2 Speed parity, web decoder v2, npm, public launch | Nov 1–30 | Not started | **Gate 2:** ≥ 100 KB/s goodput on reference rig (web sender + best decoder); 1k installs |
-| P3 Android app (trial + unlock) | Dec 1 – Jan 15, 2027 | Not started | **Gate 3:** app ≥ fastest competitor on the same rig (target ≥ 130 KB/s); 100 paid unlocks |
-| P4 iOS app, $19 bundle, Pro web receiver | Q1 2027 | Not started | iOS live; bundle key works on all platforms |
+| P2 Speed parity, web decoder v2, npm, public launch | Nov 1–30 | In progress: web decoder v2, npm, hardening and qbeam.dev done; launch not started | **Gate 2:** ≥ 100 KB/s goodput on reference rig (web sender + best decoder); 1k installs |
+| P3 Android app (trial + unlock) | Dec 1 – Jan 15, 2027 | Started: receiver app builds and runs on the emulator; no billing yet | **Gate 3:** app ≥ fastest competitor on the same rig (target ≥ 130 KB/s); 100 paid unlocks |
+| P4 iOS app, $19 bundle, Pro web receiver | Q1 2027 | Started: receiver app builds and runs in the Simulator; no StoreKit yet | iOS live; bundle key works on all platforms |
 | P5 Standalone binaries + more channels | Q1–Q2 2027 | Not started | Signed binaries in Scoop/brew/winget |
 
 Rules: don't start paid work (P3 billing) until Gate 2 passes. Each phase ends with its testing checklist green.
@@ -153,11 +153,11 @@ Marketing
 
 Development
 - [ ] P3.1 Kotlin + CameraX; native decoding via zxing-cpp (multi-code) with ML Kit as an option; high-res capture, continuous autofocus
-- [ ] P3.2 Kotlin codec port (fountain + v3 frames); passes all shared test vectors
+- [x] P3.2 (done 2026-10-01: android/core, JUnit on v3.json) Kotlin codec port (fountain + v3 frames); passes all shared test vectors
 - [ ] P3.3 Save via Storage Access Framework to a user-chosen folder; share sheet; transfer history
 - [ ] P3.4 Archive extraction in-app (tar, gz, xz) with zip-slip protection and size caps
 - [ ] P3.5 Phone → laptop: app displays the QR stream from a picked file; laptop runs `qbeam receive`
-- [ ] P3.6 Passphrase decryption (per P0.6)
+- [x] P3.6 (done 2026-10-01) Passphrase decryption (per P0.6)
 - [ ] P3.7 **Trial:** count only completed, checksum-verified transfers; counter visible from #5; transfer in progress at the limit always finishes; unlock screen links to the free web decoder
 - [ ] P3.8 Google Play Billing one-time product ($6.99) + restore purchases; offline-tolerant entitlement cache
 - [ ] P3.9 Accept `$19` bundle license keys (Ed25519-signed, verified offline) — can slip to P4
@@ -255,6 +255,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-01 · Native receivers: Kotlin and Swift v3 codecs pass the shared vectors; Android app (CameraX + zxing-cpp, saves to Downloads/qbeam) runs on the emulator; iOS app (AVFoundation 1080p/60 + Vision + QRPayload, saves to Files) builds via XcodeGen and runs in the Simulator; CI builds both. Not yet tested with a real camera · Next: real-phone tests on both apps, then trial counter + billing (P3.7/P3.8, P4.2), phone → laptop sending
 - 2026-10-01 · P2 hardening: fuzzing found a receiver DoS (one crafted code could claim a 4 GiB session in 1-byte symbols); fixed with v3 session limits (T 8–2931, L ≤ 256 MiB, K ≤ 2^20), lazy segment decoders, new reject vector. Simulated-camera optics test in CI with typical/hard profiles. User chose native apps and is installing Xcode + Android Studio · Next: Kotlin and Swift v3 codecs on the shared vectors, then app shells
 
 - 2026-10-01 · Released 0.1.0 (PyPI, npm via trusted publishing, GitHub release with .pyz). Receiver: 1 GiB gunzip cap (P1.13), catch-rate hint (P2.3/P2.6). qbeam.dev live on GitHub Pages (landing + offline receiver PWA at /r); DNS on Cloudflare set to DNS-only, waiting for GitHub's certificate. npm CLI terminal mode (P2.8) · Next: enforce HTTPS once the cert is issued; then P2 remaining (P2.9 done pending cert, P2.11–16 tests/bench) or P3 Android

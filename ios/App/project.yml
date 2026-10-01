@@ -1,0 +1,32 @@
+# XcodeGen spec for the iOS receiver app: `cd ios/App && xcodegen` writes QBeam.xcodeproj (generated, not committed).
+name: QBeam
+options:
+  bundleIdPrefix: dev.qbeam
+  deploymentTarget:
+    iOS: "17.0"
+packages:
+  QBeamKit:
+    path: ../QBeamKit
+targets:
+  QBeam:
+    type: application
+    platform: iOS
+    sources: [Sources]
+    dependencies:
+      - package: QBeamKit
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: dev.qbeam.app
+        PRODUCT_NAME: qbeam
+        MARKETING_VERSION: 0.1.0
+        CURRENT_PROJECT_VERSION: 1
+        SWIFT_VERSION: "5.0"
+        TARGETED_DEVICE_FAMILY: "1,2"
+        GENERATE_INFOPLIST_FILE: YES
+        INFOPLIST_KEY_CFBundleDisplayName: qbeam
+        INFOPLIST_KEY_NSCameraUsageDescription: "qbeam reads the codes on the sending screen with the camera. Nothing leaves this device."
+        INFOPLIST_KEY_UIFileSharingEnabled: YES
+        INFOPLIST_KEY_LSSupportsOpeningDocumentsInPlace: YES
+        INFOPLIST_KEY_UILaunchScreen_Generation: YES
+        INFOPLIST_KEY_UISupportedInterfaceOrientations: "UIInterfaceOrientationPortrait UIInterfaceOrientationLandscapeLeft UIInterfaceOrientationLandscapeRight"
+        CODE_SIGN_STYLE: Automatic

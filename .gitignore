@@ -53,6 +53,8 @@ _site/
 # Swift package builds
 ios/**/.build/
 .swiftpm/
+ios/App/*.xcodeproj/
+ios/App/build/
 
 # Gradle / Android Studio
 android/.gradle/

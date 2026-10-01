@@ -11,9 +11,9 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 ## Current status
 
 <!-- Update this block at the end of every work session. -->
-- **Phase:** P1 (in progress); P0 done except user items
-- **Last done:** P2 hardening: v3 session limits (DoS fix), fuzz tests, simulated-camera optics test in CI (2026-10-01)
-- **Next up:** native apps (user chose native; installing Xcode + Android Studio): Swift and Kotlin v3 codecs checked against protocol/test-vectors, then camera + zxing-cpp/Vision receivers. Enforce HTTPS on qbeam.dev once GitHub issues the cert. User items: phone test of 0.1.0, Windows console --tty, P0.2, P0.12
+- **Phase:** P2 hardening done; P3 (Android) and P4 (iOS) receiver apps started
+- **Last done:** native Android and iOS receiver apps build and run on emulator/Simulator; Kotlin and Swift codecs pass the shared vectors (2026-10-01)
+- **Next up:** test both apps on real phones, then the trial counter and billing (P3.7/P3.8, P4.2) and phone → laptop sending. Main has unreleased fixes since 0.1.0. P0.12 competitor baseline deferred by user. P0.2 still needs a code of conduct
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
@@ -43,6 +43,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 | `web/build.py` → `web/dist/decoder.html` | Builds the single-file receiver (~1.3 MB); generated, CI checks it's current |
 | `web/test/e2e.html` | Browser end-to-end test: real sender page → real receiver (see web/README.md) |
 | `protocol/SPEC.md`, `protocol/test-vectors/` | Normative spec (v3 current, v2 legacy) and vectors |
+| `android/` | Gradle: `:core` (Kotlin v3 codec + Receiver, JUnit) and `:app` (CameraX + zxing-cpp receiver, Compose) |
+| `ios/QBeamKit`, `ios/App` | Swift v3 codec + Receiver (`swift test --disable-sandbox`); SwiftUI receiver app from `App/project.yml` (run `xcodegen`; the .xcodeproj is gitignored) |
 | `bench/` | Speed spike (`bench/spike`), fountain benchmark (`bench/protocol`), results (`bench/RESULTS.md`) |
 
 Protocol: senders and the receiver speak **v3** only (binary codes: 18-byte header + symbol + CRC-32; segmented fountain

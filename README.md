@@ -1,42 +1,99 @@
 # qbeam — files over light
 
-Move a file from one screen to another device's camera as an animated QR stream. No network, no USB,
-no install on the receiving side. Transfers are verified with SHA-256.
+Send a file from a computer screen to your phone as a stream of QR codes. No network between the two, no cable, no
+admin rights, nothing to install on the computer beyond one command. Every transfer is checked with SHA-256.
 
-> Status: early alpha. See [PLAN.md](PLAN.md) for what's next.
+[![PyPI](https://img.shields.io/pypi/v/qbeam)](https://pypi.org/project/qbeam/)
+[![npm](https://img.shields.io/npm/v/qbeam)](https://www.npmjs.com/package/qbeam)
+[![Android APK](https://img.shields.io/github/v/release/qbeam/qbeam?label=android%20apk)](https://github.com/qbeam/qbeam/releases/latest)
+[![CI](https://github.com/qbeam/qbeam/actions/workflows/ci.yml/badge.svg)](https://github.com/qbeam/qbeam/actions/workflows/ci.yml)
+[![License](https://img.shields.io/github/license/qbeam/qbeam)](LICENSE)
 
-## Try it today
+![The browser sender and the terminal sender showing the same file](docs/media/senders.gif)
 
 ```bash
-uvx qbeam send path/to/file      # or: pipx install qbeam · npx qbeam send path/to/file
+uvx qbeam send report.pdf
 ```
 
-1. The sender page opens in your browser. Press Fullscreen.
-2. On your phone, open [qbeam.dev/r](https://qbeam.dev/r) in Chrome or Safari (it works offline once added to the
-   home screen), or use the Android app below, and point the camera at the codes.
-3. The file saves once every block is received and its SHA-256 matches.
+Then point your phone at the codes, with [qbeam.dev/r](https://qbeam.dev/r) open or the [Android app](#receive). The
+file arrives once it's complete and verified.
 
-Folders go as one archive (`qbeam send ./project`, `.gitignore` respected). `--speed max` reached 246 KB/s on an
-iPhone in testing; `--encrypt` adds AES-256-GCM with a passphrase you type on the phone
-(`pip install "qbeam[crypto]"`). Over SSH or without a browser, `--tty` draws the codes in the terminal instead
-(automatic over SSH). No install at all: download `qbeam-<version>.pyz` from the GitHub release and run
-`python3 qbeam-<version>.pyz send file`. From a checkout: `python3 py/encode.py path/to/file`.
+> Early alpha. Plan and progress: [PLAN.md](PLAN.md).
 
-## Android app
+## Install
 
-Download `qbeam-<version>.apk` from the [latest release](https://github.com/qbeam/qbeam/releases/latest) and open it
-on the phone (Android 10+; allow installs from your browser when asked). It reads the codes natively, at about
-280 KB/s in testing, saves to Downloads/qbeam, and has no internet permission. Check the download against the
-`.sha256` file next to it. The app's signing certificate (SHA-256) is:
+Every option works without admin rights, on macOS, Linux and Windows.
+
+| You have | Run |
+| --- | --- |
+| [uv](https://docs.astral.sh/uv/) | `uvx qbeam send <file>` (nothing to install) |
+| pipx | `pipx install qbeam`, then `qbeam send <file>` |
+| Node 18+ | `npx qbeam send <file>` |
+| Only Python 3.8+ | download `qbeam-<version>.pyz` from the [latest release](https://github.com/qbeam/qbeam/releases/latest), then `python3 qbeam-<version>.pyz send <file>` |
+
+The Python package uses only the standard library. Encryption needs one extra there:
+`pipx install "qbeam[crypto]"` (the npm version has it built in).
+
+## Send
+
+| Command | What it does |
+| --- | --- |
+| `qbeam send <file>` | Opens the sender page in your browser. Press Fullscreen. Fastest |
+| `qbeam send --tty <file>` | Draws the codes in the terminal instead: over SSH, or with no browser. Automatic over SSH |
+| `--speed safe` / `fast` / `max` | 2×2 codes at 10 fps / 3×2 at 15 fps (default) / 3×2 larger codes at 30 fps for a 60 fps phone camera |
+| `qbeam send ./project` | A folder, as one archive (respects `.gitignore`; Python version) |
+| `cat build.log \| qbeam send -` | Standard input |
+| `--encrypt` | AES-256-GCM. Prints a passphrase to type on the phone; keep it off the screen the camera sees |
+
+For terminal mode, make the window large and the font small: more codes fit, so it goes faster.
+
+## Receive
+
+| On | Use |
+| --- | --- |
+| **Android** | The app: [download the APK](https://github.com/qbeam/qbeam/releases/latest) (Android 10+). Native decoding, saves to Downloads/qbeam, no internet permission. Also coming to IzzyOnDroid and F-Droid |
+| **iPhone**, or any phone | [qbeam.dev/r](https://qbeam.dev/r) in Safari or Chrome. Add it to the home screen and it works offline. An iPhone app is in testing |
+| A laptop's webcam | `qbeam receive` opens the same receiver page locally |
+
+<p>
+  <img src="store/screenshots/raw/ios-1-receiving.jpg" width="240" alt="iPhone app receiving at 299 KB/s">
+  &nbsp;
+  <img src="store/screenshots/raw/android-2-saved.jpg" width="240" alt="Android app: saved 4.6 MB in 17 s at 267 KB/s">
+</p>
+
+Measured with `--speed max`: about **280 KB/s** in the apps (iPhone 15, OnePlus 12) and 246 KB/s in Chrome on the
+iPhone. A 2 MB photo takes about 8 seconds; text and logs are compressed first, so they go faster.
+
+<details>
+<summary>Verifying the Android APK</summary>
+
+Check the download against the `.sha256` file next to it. The app's signing certificate (SHA-256) is:
 
 ```
 C9:FC:71:E0:52:E3:2A:50:B3:79:74:C7:03:67:9F:5C:FE:68:A3:6E:DA:37:E3:EA:C8:99:D9:34:0B:50:72:14
 ```
 
-To verify an APK before installing: `apksigner verify --print-certs qbeam-<version>.apk`. Updates must be signed
-with the same certificate. An iPhone app is planned; until then use qbeam.dev/r in Safari.
+`apksigner verify --print-certs qbeam-<version>.apk` shows it. Updates must be signed with the same certificate.
+</details>
 
-## Repository layout
+## How it works
+
+- The file is compressed, split into blocks and encoded with a **fountain code**: the phone can rebuild it from any
+  large enough set of codes, so a missed frame never means waiting for the loop to come round.
+- Each frame shows a grid of QR codes in binary mode. The receiver reads several per camera frame with
+  [zxing-cpp](https://github.com/zxing-cpp/zxing-cpp) (natively in the apps, as WebAssembly in the browser).
+- The format is specified in [protocol/SPEC.md](protocol/SPEC.md), with shared test vectors that every implementation
+  (Python, JavaScript, Kotlin, Swift) must pass.
+
+## Privacy and acceptable use
+
+No accounts, analytics or telemetry, and the CLI makes no network connections: see the
+[privacy page](https://qbeam.dev/privacy/). Anyone who can see the sending screen can read an unencrypted transfer.
+Use `--encrypt` for anything sensitive, and only move data you're authorised to move, on systems you're allowed to
+use it on.
+
+<details>
+<summary>Contributing: repository layout and tests</summary>
 
 | Path | What |
 | --- | --- |
@@ -45,14 +102,15 @@ with the same certificate. An iPhone app is planned; until then use qbeam.dev/r 
 | `js/` | Protocol v3 reference codec (`qbeam3.js`) and npm package `qbeam` |
 | `web/` | Sender and receiver pages; `web/build.py` builds `web/dist/decoder.html` |
 | `android/`, `ios/` | Native receiver apps (Kotlin + CameraX, Swift + AVFoundation; both use zxing-cpp) |
-| `go/` | Standalone binaries (planned) |
-| `bench/` | Benchmark rig and results (planned) |
-| `docs/` | User docs (planned) |
+| `site/` | qbeam.dev |
+| `store/` | Store listings and screenshots |
+| `docs/` | Releasing, README media (`scripts/readme_media.py` builds the GIF) |
 
-## Acceptable use
-
-Use this only to move data you are authorised to move, on systems you are allowed to use it on.
+Tests (from the repo root): `python3 -m unittest discover -s py/tests` and `node js/test/roundtrip.js`,
+`v3.js`, `terminal_decode.js`, `fuzz.js`, `optics.js`. Android: `./gradlew :core:test` in `android/`.
+iOS codec: `swift test` in `ios/QBeamKit`. Releases: [docs/RELEASING.md](docs/RELEASING.md).
+</details>
 
 ## License
 
-Apache-2.0 — see [LICENSE](LICENSE). Third-party components: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).
+Apache-2.0: see [LICENSE](LICENSE). Third-party components: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

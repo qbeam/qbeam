@@ -84,7 +84,12 @@ class Controller(private val context: Context, private val ui: UiState) {
     private var pending: Receiver.Session? = null  // complete but waiting for a passphrase
     private var lastUi = 0L
 
-    fun onCodes(codes: List<ByteArray>, s: Scanner.Stats) = worker.execute {
+    fun onStats(s: Scanner.Stats) {
+        val text = s.summary
+        main.post { ui.stats = text }
+    }
+
+    fun onCodes(codes: List<ByteArray>) = worker.execute {
         var complete: Receiver.Session? = null
         var notice: String? = null
         for (c in codes) {
@@ -100,10 +105,8 @@ class Controller(private val context: Context, private val ui: UiState) {
         if (complete == null && now - lastUi < 250) return@execute // ~4 UI updates a second is plenty
         lastUi = now
         val rate = receiver.catchRate()
-        val stats = "${s.width}×${s.height} · ${if (s.frameIntervalMs > 0) 1000 / s.frameIntervalMs else 0} fps · ${s.decodeMs} ms decode"
         val elapsed = session?.let { (now - startedAt.getValue(it.id)) / 1000.0 } ?: 0.0
         main.post {
-            ui.stats = stats
             if (notice != null && (session == null || session.progress == 0.0)) ui.notice = notice
             if (session != null && !session.finished && ui.saved == null && !ui.needsPassphrase) {
                 ui.progress = session.progress.toFloat()
@@ -133,10 +136,11 @@ class Controller(private val context: Context, private val ui: UiState) {
             val saved = receiver.finish(s, pass)
             val uri = Saver.save(context, saved.filename, saved.bytes)
             pending = null
+            val took = took(s)
             main.post {
                 ui.needsPassphrase = false; ui.hint = null; ui.progress = 1f
                 ui.saved = saved.filename to uri
-                ui.status = "Saved ${saved.filename} (${size(saved.bytes.size.toLong())}) to Downloads/qbeam."
+                ui.status = "Saved ${saved.filename} (${size(saved.bytes.size.toLong())}) to Downloads/qbeam$took."
             }
         } catch (e: QBeamException) {
             when (e.reason) {
@@ -147,6 +151,12 @@ class Controller(private val context: Context, private val ui: UiState) {
         } catch (e: Exception) {
             main.post { ui.notice = "Could not save: ${e.message}" }
         }
+    }
+
+    /** " in 28 s at 271 KB/s": from the first code to the last, counting the bytes on screen (compressed). */
+    private fun took(s: Receiver.Session): String {
+        val sec = (System.currentTimeMillis() - s.started) / 1000.0
+        return if (sec < 0.5) "" else " in ${sec.toInt()} s at ${size((s.L / sec).toLong())}/s"
     }
 
     private fun rateText(s: Receiver.Session, elapsedSec: Double): String {
@@ -183,7 +193,7 @@ fun ReceiverScreen() {
             Button(onClick = { ask.launch(Manifest.permission.CAMERA) }) { Text("Allow camera") }
             return@Column
         }
-        val scanner = remember { Scanner(controller::onCodes) }
+        val scanner = remember { Scanner(controller::onCodes, controller::onStats) }
         DisposableEffect(Unit) { onDispose { scanner.shutdown(); controller.shutdown() } }
         Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
             AndroidView(factory = { ctx -> PreviewView(ctx).also { scanner.bind(owner, it) } }, modifier = Modifier.fillMaxSize())

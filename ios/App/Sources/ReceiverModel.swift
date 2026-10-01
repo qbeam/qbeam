@@ -72,10 +72,13 @@ final class ReceiverModel: ObservableObject {
             let file = try receiver.finish(s, passphrase: passphrase)
             let url = try Self.store(file)
             pending = nil
+            // From the first code to the last, counting the bytes on screen (compressed).
+            let sec = Date().timeIntervalSince1970 - s.started
+            let took = sec < 0.5 ? "" : " in \(Int(sec)) s at \(Self.size(Int(Double(s.L) / sec)))/s"
             Task { @MainActor in
                 self.needsPassphrase = false; self.hint = nil; self.progress = 1
                 self.saved = url
-                self.status = "Saved \(url.lastPathComponent) (\(Self.size(file.bytes.count))). Find it in Files › On My iPhone › qbeam."
+                self.status = "Saved \(url.lastPathComponent) (\(Self.size(file.bytes.count)))\(took). Find it in Files › On My iPhone › qbeam."
             }
         } catch QBeamError.envelope("passphrase") {
             pending = s

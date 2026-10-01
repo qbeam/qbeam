@@ -5,21 +5,28 @@ no admin rights, and nothing to install on the receiving side. Transfers are ver
 
 ```bash
 npx qbeam send app.log
+cat trace.txt | npx qbeam send - --name trace.txt
 ```
 
-1. `qbeam send <file>` writes a self-contained `<file>.sender.html`. Open it in a browser (works offline).
-2. On the receiving device, open the decoder page (`qbeam receive` prints its path; copy it to your phone)
-   and point the camera at the screen. The file saves once every block arrives and the checksum matches.
+1. `qbeam send <file>` writes a self-contained `<file>.sender.html` and opens it in your browser (works offline).
+   Press Fullscreen for the best speed.
+2. On the phone, open the qbeam receiver page (`qbeam receive` prints its path; copy it to the phone once, it works
+   offline) in Chrome or Safari and point the camera at the codes. The file saves once it's complete and its
+   SHA-256 matches.
 
-Folders: use the Python version for now, `uvx qbeam send myfolder --archive`.
+Options: `--speed safe|fast|max` (default fast; max needs a 60 fps phone camera), `--encrypt` (prints a passphrase
+to type on the phone; never shown on the QR screen), `--name` and `-` for stdin, `--no-open`.
 
-This package also exports the fountain codec: `require("qbeam")` returns `{ Encoder, Decoder, HEADER_EVERY }`.
+Folders: use the Python version, `uvx qbeam send myfolder` (sent as one `.tar.xz`).
 
-Status: early alpha (0.0.x). Source and roadmap: https://github.com/qbeam/qbeam
+This package also exports the protocol v3 codec: `require("qbeam")` returns `{ Encoder, Decoder, encodeCode, parseCode, ... }`.
+
+Status: early alpha. Encryption needs Node 18+ (built in). Source and roadmap: https://github.com/qbeam/qbeam
 
 Use it only to move data you're authorised to move. Apache-2.0 licensed.
 
 ## Developing in this repo
 
-- `fountain.js` is the shared codec, inlined into the sender and decoder pages at build time.
+- `qbeam3.js` is the protocol v3 reference codec (framing, segmented fountain code, container, encryption), inlined into
+  the sender and receiver pages. `fountain.js` is the old v2 codec, kept as the reference for the v2 test vectors.
 - `npm pack` runs `scripts/sync-assets.js`, which copies the page templates, decoder and license files into this folder (gitignored).

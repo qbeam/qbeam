@@ -57,9 +57,11 @@ encoding time); receivers MUST accept any level and mask.
 3. CRC mismatch: ignore.
 4. Any must-understand flag bit set that this receiver doesn't implement: ignore, and SHOULD tell the user.
 
-**Session identity** is the tuple (`session`, `L`, `T`, must-understand flag bits). Session adoption follows the v2
-rule (§v2.6): a code from a different session replaces the current one only if the current one is idle (none,
-finished, or no symbols accepted yet).
+**Session identity** is the tuple (`session`, `L`, `T`, must-understand flag bits). A code from a different session
+replaces the current one only if the current one is idle: none, finished, no symbols accepted yet, or no new
+symbol for at least 3 seconds. The last case lets a receiver follow a sender that restarted or changed its QR
+version (which changes T and therefore the session) without the user pressing reset, while a second sender
+briefly in view can't disrupt an active transfer.
 
 ### 3. Segments
 

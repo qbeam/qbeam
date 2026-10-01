@@ -11,8 +11,8 @@ Product and command name: **qbeam** (chosen 2026-09-30; free on PyPI, npm, `.dev
 
 | Phase | Target window | Status | Exit gate |
 | --- | --- | --- | --- |
-| P0 Foundations | Oct 1–7, 2026 | In progress | Repo, spec draft, CI green on 3 OSes |
-| P1 Python CLI + terminal mode | Oct 8–31 | Not started | **Gate 1:** installs and sends on macOS/Linux/Windows with no admin rights |
+| P0 Foundations | Oct 1–7, 2026 | Done except user items (P0.2 CoC, P0.10 handles/stores, P0.12 deferred) | Repo, spec draft, CI green on 3 OSes |
+| P1 Python CLI + terminal mode | Oct 8–31 | In progress (v3 senders + receiver done; terminal mode, .pyz next) | **Gate 1:** installs and sends on macOS/Linux/Windows with no admin rights |
 | P2 Speed parity, web decoder v2, npm, public launch | Nov 1–30 | Not started | **Gate 2:** ≥ 100 KB/s goodput on reference rig (web sender + best decoder); 1k installs |
 | P3 Android app (trial + unlock) | Dec 1 – Jan 15, 2027 | Not started | **Gate 3:** app ≥ fastest competitor on the same rig (target ≥ 130 KB/s); 100 paid unlocks |
 | P4 iOS app, $19 bundle, Pro web receiver | Q1 2027 | Not started | iOS live; bundle key works on all platforms |
@@ -75,22 +75,22 @@ Marketing
 ## P1 — Python CLI + terminal mode (Oct 8–31)
 
 Development
-- [ ] P1.1 Package `encode.py` as `qbeam` with entry point; commands: `send`, `receive`, `version` — started early for the 0.0.1 name claim: `qbeam send` / `receive` / `--version` exist in py/ and js/; still needs the P1 features below
-- [ ] P1.2 `send <file>` / `send -` (stdin) / `send <dir> --archive` (respect `.gitignore` + existing junk patterns) / `--exclude`
+- [x] P1.1 (done 2026-10-01: send / receive / --version on protocol v3) Package `encode.py` as `qbeam` with entry point; commands: `send`, `receive`, `version` — started early for the 0.0.1 name claim: `qbeam send` / `receive` / `--version` exist in py/ and js/; still needs the P1 features below
+- [x] P1.2 (done 2026-10-01: stdin with --name; folders always one archive; .gitignore + junk + --exclude skipped) `send <file>` / `send -` (stdin) / `send <dir> --archive` (respect `.gitignore` + existing junk patterns) / `--exclude`
 - [ ] P1.3 Vendor a pure-Python QR encoder (e.g. Nayuki `qrcodegen`, MIT) for terminal mode
 - [ ] P1.4 Terminal renderer: Unicode half-blocks (2 modules per char), ANSI cursor-home redraw, auto-fit QR version to terminal size, `--invert` for light themes, clean exit on Ctrl-C (restore cursor/screen)
 - [ ] P1.5 Windows console: enable VT processing via ctypes; UTF-8 output; fall back gracefully on legacy conhost
 - [ ] P1.4a Terminal graphics protocols for pixel output where supported (kitty, iTerm2 inline images, sixel incl. Windows Terminal); detect and prefer them over half-blocks
-- [ ] P1.6 Pixel sender: `send` opens the full-speed sender page (self-contained HTML → temp file → `webbrowser`) by default when a display is available; `--tty` forces terminal mode; headless sessions fall back to terminal automatically. All heavy encoding (fountain + QR) runs in JS/WASM in the page, not in Python.
-- [ ] P1.7 `receive`: opens the offline decoder page (webcam) for laptop-to-laptop / phone-to-laptop
-- [ ] P1.8 Print SHA-256 and a short summary (size, compressed size, frames, estimated time) before sending
+- [ ] P1.6 (pixel sender opens by default since 2026-10-01; --no-open; terminal fallback waits on P1.4) Pixel sender: `send` opens the full-speed sender page (self-contained HTML → temp file → `webbrowser`) by default when a display is available; `--tty` forces terminal mode; headless sessions fall back to terminal automatically. All heavy encoding (fountain + QR) runs in JS/WASM in the page, not in Python.
+- [x] P1.7 (done 2026-10-01: prints and opens the v3 receiver page) `receive`: opens the offline decoder page (webcam) for laptop-to-laptop / phone-to-laptop
+- [x] P1.8 (done 2026-10-01: size, compression, encryption, speed preset and estimated time) Print SHA-256 and a short summary (size, compressed size, frames, estimated time) before sending
 - [ ] P1.9 Build a single-file `qbeam.pyz` (stdlib `zipapp`) in CI; attach to GitHub releases with checksums
 - [ ] P1.10 Publish to TestPyPI, then PyPI; verify `uvx qbeam`, `pipx install qbeam`, `pip install --user qbeam`
-- [ ] P1.11 Decoder: in-browser `.tar.gz` handling decision (save as-is vs. prefer gzip'd tar for single-file receivers)
+- [x] P1.11 (done 2026-10-01: folders arrive as .tar.xz; single files are gunzipped in the browser; already-compressed files sent as-is) Decoder: in-browser `.tar.gz` handling decision (save as-is vs. prefer gzip'd tar for single-file receivers)
 
 Testing
-- [ ] P1.12 Unit: CLI arg parsing, archive excludes, stdin, compression choices, filename encoding (unicode, long names)
-- [ ] P1.13 Security: sanitize received filenames (no path separators, no `..`, no absolute paths); cap decompressed size (zip-bomb guard)
+- [x] P1.12 (done 2026-10-01: py/tests/test_cli.py rewritten for v3, incl. stdin, .gitignore, HTML escaping, encryption) Unit: CLI arg parsing, archive excludes, stdin, compression choices, filename encoding (unicode, long names)
+- [ ] P1.13 (receiver strips path components and rejects ./..; decompression-size cap still to do) Security: sanitize received filenames (no path separators, no `..`, no absolute paths); cap decompressed size (zip-bomb guard)
 - [ ] P1.14 Terminal snapshot tests: rendered frame text for fixed inputs across widths
 - [ ] P1.15 Decode-what-we-render test: render terminal frames to images (dev-only deps: Pillow, `zxing-cpp`) and decode them back
 - [ ] P1.16 **Install matrix in CI, as non-admin user:** `uvx`, `pipx`, `pip --user`, `.pyz` × macOS / Ubuntu / Windows × Python 3.8–3.13
@@ -112,20 +112,20 @@ Marketing
 Speed budget (on paper, to be proven on the rig): 4 codes × 2,953 B × 15 fps ≈ 175 KB/s raw → ≥ 130 KB/s goodput after headers and fountain overhead. Every task below serves that number.
 
 Development
-- [ ] P2.1 Implement protocol v3 binary frames in Python + JS encoders (QR byte mode, no base64)
-- [ ] P2.1a Implement the sparse fountain code chosen in P0.5a in JS/WASM (sender) and for all decoders; keep the dense code only for tiny files if it helps
-- [ ] P2.2 Large blocks up to QR v40-L (2,953 B), ECC level L; block size matched to the QR version per preset. Spike: density is capped by camera pixels (≥ ~3.3 px/module), so at 1080p prefer more mid-size codes (v25–v30) over fewer v40s
-- [ ] P2.2a Fixed QR mask in every sender (spike: 18 ms → 1.1 ms per code, no decode loss)
-- [ ] P2.3 Speed presets `--speed safe|fast|max` (frame rate 10–30 fps, code size, grid) — no feedback channel, so presets + receiver hint; `max` is the default on a pixel display
+- [x] P2.1 (done 2026-10-01: js/qbeam3.js + py protocol_v3; sender page emits v3 binary codes) Implement protocol v3 binary frames in Python + JS encoders (QR byte mode, no base64)
+- [x] P2.1a (done 2026-10-01: segmented dense code in the sender page and receiver) Implement the sparse fountain code chosen in P0.5a in JS/WASM (sender) and for all decoders; keep the dense code only for tiny files if it helps
+- [x] P2.2 (done 2026-10-01: T = version capacity − 22 per preset) Large blocks up to QR v40-L (2,953 B), ECC level L; block size matched to the QR version per preset. Spike: density is capped by camera pixels (≥ ~3.3 px/module), so at 1080p prefer more mid-size codes (v25–v30) over fewer v40s
+- [x] P2.2a (done 2026-10-01: web/vendor/qrcodegen.js patched with setMask; sender uses mask 2) Fixed QR mask in every sender (spike: 18 ms → 1.1 ms per code, no decode loss)
+- [ ] P2.3 (presets done 2026-10-01 (safe 2x2 v25 @10, fast 3x2 v25 @15, max 3x2 v30 @30); receiver 'too fast' hint still to do) Speed presets `--speed safe|fast|max` (frame rate 10–30 fps, code size, grid) — no feedback channel, so presets + receiver hint; `max` is the default on a pixel display
 - [ ] P2.3a Sender render loop: pre-generate frames ahead in a Worker, draw to canvas with `requestAnimationFrame`, frame changes locked to display refresh (no tearing/half-drawn frames)
-- [ ] P2.4 Multi-code frames: 2×2 (and 3×2 on large screens) grid of codes per frame; terminal stays single-code
+- [x] P2.4 (done 2026-10-01: sender grids 2x2 / 3x2) Multi-code frames: 2×2 (and 3×2 on large screens) grid of codes per frame; terminal stays single-code
 - [ ] P2.4a Fallback if plain QR can't reach parity on the rig: high-density colour mode (cimbar-style or libcimbar-compatible, licence permitting)
-- [ ] P2.5 Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR. Spike-proven recipe: WebCodecs VideoFrame → native-format luma plane → zxing `readBarcodesFromPixmap` in a worker pool, tryHarder on, `min` resolution constraints, canvas fallback; recommend Chrome on Android
+- [x] P2.5 (done 2026-10-01: web/dist/decoder.html, single offline file, zxing WASM worker pool, Y-plane copy with fallbacks, min resolution/fps constraints, camera picker) Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR. Spike-proven recipe: WebCodecs VideoFrame → native-format luma plane → zxing `readBarcodesFromPixmap` in a worker pool, tryHarder on, `min` resolution constraints, canvas fallback; recommend Chrome on Android
 - [ ] P2.6 Receiver hint: decoder shows "missing X% of frames — try `--speed safe`" when its drop rate is high
-- [ ] P2.7 Keep v2 text frames decodable (backward compatibility) for one release
-- [ ] P2.8 npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
+- [x] P2.7 (decided 2026-10-01: no v2 decoding; the receiver tells users to regenerate old pages (0.0.1 had almost no users)) Keep v2 text frames decodable (backward compatibility) for one release
+- [ ] P2.8 (send on v3 done 2026-10-01 (single files, stdin, --encrypt); Node terminal renderer still to do) npm package: `npx qbeam send|receive` using the shared JS codec + a terminal renderer in Node
 - [ ] P2.9 Hosted web decoder as an installable offline PWA; also downloadable single HTML
-- [ ] P2.10 Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it. Codec done (P0.6); remaining: CLI flag (generate a passphrase and print it in the terminal, never on the QR screen), receiver prompt, friendly error when `cryptography` is missing
+- [x] P2.10 (done 2026-10-01: --encrypt with generated or QBEAM_PASSPHRASE passphrase printed only in the terminal; receiver prompts and decrypts) Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it. Codec done (P0.6); remaining: CLI flag (generate a passphrase and print it in the terminal, never on the QR screen), receiver prompt, friendly error when `cryptography` is missing
 
 Testing
 - [ ] P2.11 Cross-codec tests: Python-encode → JS-decode and JS-encode → Python-decode on all test vectors
@@ -253,6 +253,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · Protocol v3 end to end: new sender page (grid, presets, fixed mask), new single-file receiver (zxing WASM workers, Y-plane, passphrase prompt), Python and npm CLIs on v3 (stdin, folders with .gitignore, --speed, --encrypt, auto-open). Browser e2e test (web/test/e2e.html) passes for text, 30 KB binary at max speed and encrypted. Fixed: checkouts used stale packaged assets. jsQR removed · Next: terminal mode (P1.3–P1.5), .pyz (P1.9), then release 0.1.0
 
 - 2026-10-01 · P0.6 done: encryption as optional extra qbeam[crypto]. SPEC v3 §7 envelope (PBKDF2-HMAC-SHA256 + AES-256-GCM, prefix authenticated), flag bit 0 must-understand. JS (WebCrypto) and Python (hashlib + cryptography) produce identical vectors; tests cover wrong passphrase, tampering, iteration cap, encrypted transfer under loss; CI installs cryptography only for the encryption tests · Next: build v3 into senders and receivers (P1/P2)
 

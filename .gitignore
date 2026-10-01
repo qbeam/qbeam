@@ -43,3 +43,6 @@ js/THIRD_PARTY_NOTICES.md
 bench/spike/node_modules/
 bench/spike/.cert/
 .claude/launch.json
+
+# End-to-end test sender pages
+web/test/tmp/

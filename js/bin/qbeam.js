@@ -1,6 +1,6 @@
 #!/usr/bin/env node
-// qbeam CLI (Node). Mirrors `qbeam send` / `qbeam receive` from the Python package for single files.
-// Folder archives (--archive) are Python-only for now: uvx qbeam send <dir> --archive
+// qbeam CLI (Node), protocol v3. Mirrors the Python CLI for single files and stdin.
+// Folders are Python-only for now: uvx qbeam send <folder>
 "use strict";
 var fs = require("fs");
 var path = require("path");
@@ -8,27 +8,33 @@ var zlib = require("zlib");
 var crypto = require("crypto");
 var childProcess = require("child_process");
 
+if (!globalThis.crypto) globalThis.crypto = crypto.webcrypto; // Node 18: WebCrypto isn't global yet
+
 var pkgDir = path.resolve(__dirname, "..");
 var repoRoot = path.resolve(pkgDir, "..");
 var version = require(path.join(pkgDir, "package.json")).version;
+var QBeam3 = require(path.join(pkgDir, "qbeam3.js"));
 
-// Packaged assets (npm install) first, repo checkout second.
+// Raw bytes the sender offers per second for each preset; must match web/sender_app.js and the Python CLI.
+var SPEEDS = { safe: 4 * 1251 * 10, fast: 6 * 1251 * 15, max: 6 * 1710 * 30 };
+var TYPICAL_EFFICIENCY = 0.75;
+
+// In a checkout the repo's own files win, so a stale assets/ copy from an earlier `npm pack` is never used.
 function asset(name) {
-  var packaged = path.join(pkgDir, "assets", name);
-  if (fs.existsSync(packaged)) return packaged;
   var repo = {
     "sender_shell.html": path.join(repoRoot, "web", "sender_shell.html"),
     "sender_app.js": path.join(repoRoot, "web", "sender_app.js"),
     "qrcodegen.js": path.join(repoRoot, "web", "vendor", "qrcodegen.js"),
     "decoder.html": path.join(repoRoot, "web", "dist", "decoder.html"),
-  };
-  return repo[name];
+  }[name];
+  return fs.existsSync(repo) ? repo : path.join(pkgDir, "assets", name);
 }
 
 var USAGE = [
-  "usage: qbeam send <file> [--chunk-size N] [--out page.html]",
+  "usage: qbeam send <file|-> [--speed safe|fast|max] [--encrypt] [--name NAME] [--out page.html] [--no-open]",
   "       qbeam receive [--no-open]",
   "       qbeam --version",
+  "Folders: use the Python version (uvx qbeam send <folder>).",
 ].join("\n");
 
 function fail(msg) {
@@ -37,68 +43,32 @@ function fail(msg) {
   process.exit(2);
 }
 
-// Same shape as Python's json.dumps for flat objects (", " and ": " separators, ASCII-only).
-function pyDumps(obj) {
-  return "{" + Object.keys(obj).map(function (k) {
-    var v = JSON.stringify(obj[k]).replace(/[\u007f-\uffff]/g, function (ch) {
-      return "\\u" + ch.charCodeAt(0).toString(16).padStart(4, "0");
-    });
-    return JSON.stringify(k) + ": " + v;
-  }).join(", ") + "}";
+// JSON that is safe inside <script>: no "</script>" or HTML comment sequences can appear.
+function jsonForScript(obj) {
+  return JSON.stringify(obj).replace(/</g, "\\u003c").replace(/>/g, "\\u003e").replace(/&/g, "\\u0026");
 }
 
-function sessionId() {
-  var chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  var bytes = crypto.randomBytes(6), s = "";
-  for (var i = 0; i < 6; i++) s += chars[bytes[i] % chars.length];
-  return s;
+function htmlEscape(s) {
+  return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#x27;");
 }
 
-function send(file, chunkSize, out) {
-  var stat;
-  try { stat = fs.statSync(file); } catch (e) { fail(file + " is not a file"); }
-  if (stat.isDirectory()) fail("folders aren't supported by the npm version yet; use: uvx qbeam send " + file + " --archive");
+function newPassphrase() {
+  var alphabet = "23456789abcdefghjkmnpqrstuvwxyz", groups = [];
+  for (var g = 0; g < 5; g++) {
+    var s = "";
+    for (var i = 0; i < 4; i++) s += alphabet[crypto.randomInt(alphabet.length)];
+    groups.push(s);
+  }
+  return groups.join("-");
+}
 
-  var raw = fs.readFileSync(file);
-  var compressed = zlib.gzipSync(raw, { level: 9 });
-  var sha = crypto.createHash("sha256").update(compressed).digest("hex");
-  var filename = path.basename(file);
-  var total = Math.max(1, Math.ceil(compressed.length / chunkSize));
+function sha256(b) { return new Uint8Array(crypto.createHash("sha256").update(b).digest()); }
 
-  var payload = {
-    id: sessionId(),
-    blockSize: chunkSize,
-    sha: sha,
-    filenameB64: Buffer.from(filename, "utf8").toString("base64"),
-    encoding: "gz",
-    data: compressed.toString("base64"),
-  };
-  var meta = { filename: filename, originalSize: raw.length, compressedSize: compressed.length, method: "gzip" };
-
-  var read = function (name) { return fs.readFileSync(asset(name), "utf8"); };
-  var fountain = fs.readFileSync(path.join(pkgDir, "fountain.js"), "utf8");
-  // replaceAll like Python str.replace (__TITLE__ appears twice); function replacers because the inlined
-  // sources contain "$" sequences a string replacement would interpret.
-  var page = read("sender_shell.html")
-    .replaceAll("__TITLE__", function () { return filename; })
-    .replaceAll("/*__QRCODEGEN__*/", function () { return read("qrcodegen.js"); })
-    .replaceAll("/*__FOUNTAIN__*/", function () { return fountain; })
-    .replaceAll("/*__PAYLOAD__*/", function () { return pyDumps(payload); })
-    .replaceAll("/*__META__*/", function () { return pyDumps(meta); })
-    .replaceAll("/*__APP__*/", function () { return read("sender_app.js"); });
-
-  var outPath = out || file + ".sender.html";
-  fs.writeFileSync(outPath, page);
-
-  console.log("Input:       " + file + " (" + raw.length + " bytes)");
-  console.log("Compressed:  " + compressed.length + " bytes (gzip, " + Math.round(100 * compressed.length / Math.max(1, raw.length)) + "% of original)");
-  console.log("Blocks:      " + total + " x " + chunkSize + " bytes (+ recovery frames)");
-  console.log("SHA-256:     " + sha);
-  console.log("Wrote:       " + outPath);
-  console.log("");
-  console.log("Open " + outPath + " in a browser on the sending device (double-click it),");
-  console.log("then open the decoder on the receiving device and point its camera at the screen");
-  console.log("(`qbeam receive` opens it here and prints its path, so you can copy it to a phone).");
+// SPEC v3 §5. gzip only when it helps; the SHA-256 covers what the receiver saves.
+function makeContainer(raw, filename) {
+  var name = new Uint8Array(Buffer.from(filename, "utf8")), gz = zlib.gzipSync(raw, { level: 9 });
+  if (gz.length < 0.98 * raw.length) return { container: QBeam3.encodeContainer(name, "gzip", sha256(raw), gz), how: "gzip" };
+  return { container: QBeam3.encodeContainer(name, "raw", sha256(raw), raw), how: "uncompressed" };
 }
 
 function openPath(p) {
@@ -106,14 +76,75 @@ function openPath(p) {
     : process.platform === "win32" ? ["cmd", ["/c", "start", "", p]]
     : ["xdg-open", [p]];
   try {
-    childProcess.spawn(cmd[0], cmd[1], { detached: true, stdio: "ignore" }).unref();
-  } catch (e) { /* no opener available; the path is printed anyway */ }
+    childProcess.spawn(cmd[0], cmd[1], { detached: true, stdio: "ignore" }).on("error", function () {}).unref();
+    return true;
+  } catch (e) {
+    return false;
+  }
+}
+
+async function send(opts) {
+  var raw, name, label, outPath;
+  if (opts.file === "-") {
+    raw = fs.readFileSync(0);
+    name = opts.name || "stdin.txt";
+    label = "stdin";
+    outPath = opts.out || path.join(process.cwd(), name + ".sender.html");
+  } else {
+    var stat;
+    try { stat = fs.statSync(opts.file); } catch (e) { fail(opts.file + " is not a file"); }
+    if (stat.isDirectory()) fail("folders need the Python version: uvx qbeam send " + opts.file);
+    raw = fs.readFileSync(opts.file);
+    name = opts.name || path.basename(opts.file);
+    label = opts.file;
+    outPath = opts.out || opts.file + ".sender.html";
+  }
+
+  var passphrase = null;
+  if (opts.encrypt) passphrase = process.env.QBEAM_PASSPHRASE || newPassphrase();
+  var c = makeContainer(new Uint8Array(raw), name);
+  var payload = c.container, flags = 0;
+  if (passphrase !== null) { payload = await QBeam3.sealEnvelope(c.container, passphrase); flags = QBeam3.FLAG_ENCRYPTED; }
+  var session = crypto.randomBytes(4).readUInt32BE(0);
+
+  var read = function (n) { return fs.readFileSync(asset(n), "utf8"); };
+  var qbeam3Src = fs.readFileSync(path.join(pkgDir, "qbeam3.js"), "utf8");
+  // replaceAll like Python's str.replace; function replacers because the inlined sources contain "$" sequences.
+  var page = read("sender_shell.html")
+    .replaceAll("__TITLE__", function () { return htmlEscape(name); })
+    .replaceAll("/*__QRCODEGEN__*/", function () { return read("qrcodegen.js"); })
+    .replaceAll("/*__QBEAM3__*/", function () { return qbeam3Src; })
+    .replaceAll("/*__PAYLOAD__*/", function () {
+      return jsonForScript({ session: session, flags: flags, dataB64: Buffer.from(payload).toString("base64") });
+    })
+    .replaceAll("/*__META__*/", function () { return jsonForScript({ filename: name, size: raw.length, encrypted: passphrase !== null }); })
+    .replaceAll("/*__SPEED__*/", function () { return jsonForScript(opts.speed); })
+    .replaceAll("/*__APP__*/", function () { return read("sender_app.js"); });
+  fs.writeFileSync(outPath, page);
+
+  var seconds = payload.length / (SPEEDS[opts.speed] * TYPICAL_EFFICIENCY);
+  console.log("Input:       " + label + " (" + raw.length.toLocaleString("en-US") + " bytes)");
+  console.log("Sending:     " + name + " as " + payload.length.toLocaleString("en-US") + " bytes (" + c.how +
+              (passphrase !== null ? ", encrypted" : "") + ")");
+  console.log("Speed:       " + opts.speed + ", about " + Math.max(1, Math.round(seconds)) + " s with a good camera");
+  console.log("Sender page: " + outPath);
+  if (passphrase !== null) {
+    console.log("");
+    console.log("Passphrase:  " + passphrase);
+    console.log("             Type it on the phone when asked. Don't show it on the screen the camera sees.");
+  }
+  console.log("");
+  if (opts.noOpen || !openPath(path.resolve(outPath))) {
+    console.log("Open " + outPath + " in a browser, then point the phone's qbeam receiver at it.");
+  } else {
+    console.log("Opened the sender page. Point the phone's qbeam receiver at it; press Fullscreen for best results.");
+  }
 }
 
 function receive(noOpen) {
   var p = asset("decoder.html");
-  console.log("Decoder page: " + p);
-  console.log("Copy it to the receiving device and open it there, or use this machine's webcam.");
+  console.log("Receiver page: " + p);
+  console.log("Copy it to your phone once (it works offline) and open it there, or use this computer's webcam.");
   if (!noOpen) openPath(p);
 }
 
@@ -124,17 +155,21 @@ function main(argv) {
   if (command === "receive") return receive(rest.indexOf("--no-open") !== -1);
   if (command !== "send") fail("unknown command " + command);
 
-  var file = null, chunkSize = 300, out = null;
+  var opts = { file: null, speed: "fast", encrypt: false, name: null, out: null, noOpen: false };
   for (var i = 0; i < rest.length; i++) {
-    if (rest[i] === "--chunk-size") chunkSize = parseInt(rest[++i], 10);
-    else if (rest[i] === "--out") out = rest[++i];
-    else if (rest[i].slice(0, 2) === "--") fail("unknown option " + rest[i]);
-    else if (file === null) file = rest[i];
-    else fail("unexpected argument " + rest[i]);
+    var a = rest[i];
+    if (a === "--speed") opts.speed = rest[++i];
+    else if (a === "--encrypt") opts.encrypt = true;
+    else if (a === "--name") opts.name = rest[++i];
+    else if (a === "--out") opts.out = rest[++i];
+    else if (a === "--no-open") opts.noOpen = true;
+    else if (a.slice(0, 2) === "--") fail("unknown option " + a);
+    else if (opts.file === null) opts.file = a;
+    else fail("unexpected argument " + a);
   }
-  if (!file) fail("missing file");
-  if (!(chunkSize > 0)) fail("--chunk-size must be a positive number");
-  send(file, chunkSize, out);
+  if (!opts.file) fail("missing file (or - for stdin)");
+  if (!SPEEDS[opts.speed]) fail("--speed must be safe, fast or max");
+  send(opts).catch(function (e) { console.error("qbeam: error: " + e.message); process.exit(1); });
 }
 
 main(process.argv.slice(2));

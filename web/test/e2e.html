@@ -1,0 +1,67 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<title>qbeam e2e</title>
+<style>
+  body { font: 13px system-ui, sans-serif; margin: 8px; }
+  iframe { border: 1px solid #ccc; width: 640px; height: 400px; vertical-align: top; }
+  #result { font: 14px ui-monospace, monospace; margin: 8px 0; }
+</style>
+</head>
+<body>
+<!--
+  End-to-end test: the real sender page draws codes, the real receiver decodes the sender canvas's video stream.
+  Serve the repo root over http, write sender pages into web/test/tmp/, then open:
+    /web/test/e2e.html?sender=tmp/<name>.sender.html&sha=<sha256 of the original file>&pass=<passphrase, if encrypted>
+  #result ends with PASS or FAIL. Keep the window visible: hidden tabs throttle the sender's animation.
+-->
+<div id="result">running…</div>
+<iframe id="sender"></iframe>
+<iframe id="receiver"></iframe>
+<script>
+(function () {
+  "use strict";
+  var q = new URLSearchParams(location.search), result = document.getElementById("result");
+  var sender = document.getElementById("sender"), receiver = document.getElementById("receiver");
+  var started = 0, loaded = 0;
+  function done(ok, msg) { result.textContent = (ok ? "PASS " : "FAIL ") + msg; document.title = ok ? "PASS" : "FAIL"; }
+  function hex(buf) { return Array.from(new Uint8Array(buf)).map(function (b) { return b.toString(16).padStart(2, "0"); }).join(""); }
+
+  function go() {
+    if (++loaded < 2) return;
+    var canvas = sender.contentDocument.getElementById("screen");
+    var R = receiver.contentWindow;
+    R.qbeamReceiver.useStream(canvas.captureStream(30));
+    started = performance.now();
+    var passTyped = false;
+    var timer = setInterval(function () {
+      var doc = receiver.contentDocument, status = doc.getElementById("status").textContent;
+      var err = doc.getElementById("error").textContent;
+      result.textContent = "running " + ((performance.now() - started) / 1000).toFixed(0) + " s: " + status + (err ? " | " + err : "");
+      if (q.get("pass") && !passTyped && doc.getElementById("passWrap").style.display === "block") {
+        passTyped = true;
+        doc.getElementById("passInput").value = q.get("pass");
+        doc.getElementById("passBtn").click();
+      }
+      var last = R.qbeamReceiver.last;
+      if (last) {
+        clearInterval(timer);
+        crypto.subtle.digest("SHA-256", last.bytes).then(function (d) {
+          var ok = hex(d) === q.get("sha");
+          done(ok, last.name + " " + last.bytes.length + " bytes in " + (last.ms / 1000).toFixed(1) + " s" + (ok ? "" : " (sha mismatch)"));
+        });
+      } else if (performance.now() - started > (+q.get("timeout") || 120) * 1000) {
+        clearInterval(timer);
+        done(false, "timeout: " + status + (err ? " | " + err : ""));
+      }
+    }, 500);
+  }
+  sender.addEventListener("load", go);
+  receiver.addEventListener("load", go);
+  sender.src = q.get("sender");
+  receiver.src = "../dist/decoder.html";
+})();
+</script>
+</body>
+</html>

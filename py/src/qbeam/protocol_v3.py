@@ -13,6 +13,7 @@ HEADER = 18
 OVERHEAD = HEADER + 4
 KMAX = 2048
 ENCODINGS = {"raw": 0, "gzip": 1}
+FLAG_ENCRYPTED = 0x01  # SPEC v3 §2, bit 0; payload is an encryption envelope (§7)
 
 _M32 = 0xFFFFFFFF
 

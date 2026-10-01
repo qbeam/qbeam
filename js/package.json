@@ -22,11 +22,11 @@
   "bin": {
     "qbeam": "bin/qbeam.js"
   },
-  "main": "fountain.js",
+  "main": "qbeam3.js",
   "files": [
     "bin/",
     "assets/",
-    "fountain.js",
+    "qbeam3.js",
     "LICENSE",
     "THIRD_PARTY_NOTICES.md"
   ],

@@ -33,7 +33,7 @@ jobs:
       - name: Python tests
         run: '"$(uv python find ${{ matrix.python }})" -m unittest discover -s py/tests -v'
       - name: Python encryption tests (with the optional qbeam[crypto] package)
-        run: uv run --no-project --python ${{ matrix.python }} --with "cryptography>=41" python -m unittest discover -s py/tests -p "test_crypto_v3.py" -v
+        run: uv run --no-project --python ${{ matrix.python }} --with "cryptography>=41" python -m unittest discover -s py/tests -p "test_c*.py" -v
       - name: Round-trip tests (Node and Python CLIs)
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/roundtrip.js
       - name: Protocol v3 tests (JS codec, Python-encoded codes)
@@ -117,11 +117,11 @@ jobs:
           wheel=$(ls dist/python/*.whl)
           got=$(uvx --python ${{ matrix.python }} --from "$wheel" qbeam --version)
           test "$got" = "$expected" || { echo "expected '$expected', got '$got'"; exit 1; }
-          uvx --python ${{ matrix.python }} --from "$wheel" qbeam send README.md --out "$RUNNER_TEMP/py.html"
+          uvx --python ${{ matrix.python }} --from "$wheel" qbeam send README.md --no-open --out "$RUNNER_TEMP/py.html"
           uvx --python ${{ matrix.python }} --from "$wheel" qbeam receive --no-open
       - name: npx qbeam
         run: |
           tgz=$(ls dist/npm/*.tgz)
           npx --yes --package "./$tgz" -- qbeam --version
-          npx --yes --package "./$tgz" -- qbeam send README.md --out "$RUNNER_TEMP/npm.html"
+          npx --yes --package "./$tgz" -- qbeam send README.md --no-open --out "$RUNNER_TEMP/npm.html"
           npx --yes --package "./$tgz" -- qbeam receive --no-open

@@ -5,13 +5,19 @@ no admin rights, and nothing to install on the receiving side. Transfers are ver
 
 ```bash
 uvx qbeam send app.log        # or: pipx install qbeam
+uvx qbeam send ./project      # a folder goes as one .tar.xz; .gitignore respected
 ```
 
-1. `qbeam send <file>` writes a self-contained `<file>.sender.html`. Open it in a browser (works offline).
-2. On the receiving device, open the decoder page (`qbeam receive` prints its path; copy it to your phone)
-   and point the camera at the screen. The file saves once every block arrives and the checksum matches.
+1. `qbeam send <file>` writes a self-contained `<file>.sender.html` and opens it in your browser (works offline).
+   Press Fullscreen for the best speed.
+2. On the phone, open the qbeam receiver page (`qbeam receive` prints its path; copy it to the phone once, it works
+   offline) in Chrome or Safari and point the camera at the codes. The file saves once it's complete and its
+   SHA-256 matches.
 
-Send a folder as one archive: `qbeam send myfolder --archive`.
+Options: `--speed safe|fast|max` (default fast; max needs a 60 fps phone camera), `--encrypt` (prints a passphrase
+to type on the phone; never shown on the QR screen), `--name` and `-` for stdin, `--no-open`.
+
+Encryption needs the optional package: `pip install "qbeam[crypto]"` (or `uvx --from "qbeam[crypto]" qbeam send ... --encrypt`).
 
 Status: early alpha (0.0.x). Terminal mode, higher speed and native apps are on the way:
 https://github.com/qbeam/qbeam

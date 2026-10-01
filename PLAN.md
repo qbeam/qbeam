@@ -90,7 +90,7 @@ Development
 
 Testing
 - [x] P1.12 (done 2026-10-01: py/tests/test_cli.py rewritten for v3, incl. stdin, .gitignore, HTML escaping, encryption) Unit: CLI arg parsing, archive excludes, stdin, compression choices, filename encoding (unicode, long names)
-- [ ] P1.13 (receiver strips path components and rejects ./..; decompression-size cap still to do) Security: sanitize received filenames (no path separators, no `..`, no absolute paths); cap decompressed size (zip-bomb guard)
+- [x] P1.13 (done 2026-10-01: receiver strips paths, rejects ./.., refuses gzip that expands past 1 GiB) Security: sanitize received filenames (no path separators, no `..`, no absolute paths); cap decompressed size (zip-bomb guard)
 - [x] P1.14 (done 2026-10-01: py/tests/test_terminal.py parses rendered frames back to modules) Terminal snapshot tests: rendered frame text for fixed inputs across widths
 - [x] P1.15 (done 2026-10-01: js/test/terminal_decode.js paints terminal frames as 8x16 px glyphs, zxing decodes, file rebuilt) Decode-what-we-render test: render terminal frames to images (dev-only deps: Pillow, `zxing-cpp`) and decode them back
 - [ ] P1.16 **Install matrix in CI, as non-admin user:** `uvx`, `pipx`, `pip --user`, `.pyz` × macOS / Ubuntu / Windows × Python 3.8–3.13

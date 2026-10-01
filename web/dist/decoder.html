@@ -551,7 +551,7 @@ if (typeof module !== "undefined") module.exports = QBeam3;
           return save(s, container);
         }, function () {
           setStatus("Wrong passphrase (or the transfer was damaged). Try again.");
-        });
+        }).catch(function (e) { setError("Could not save: " + e.message); });
       };
       return;
     }
@@ -564,14 +564,38 @@ if (typeof module !== "undefined") module.exports = QBeam3;
     return !name || name === "." || name === ".." ? "qbeam-file" : name;
   }
 
+  // Decompressed files above this are refused: a tiny crafted gzip could otherwise expand until the phone runs out
+  // of memory. Real transfers this large would take over an hour at qbeam speeds anyway.
+  var MAX_SAVED_BYTES = 1024 * 1024 * 1024;
+
+  function gunzipCapped(data) {
+    var reader = new Blob([data]).stream().pipeThrough(new DecompressionStream("gzip")).getReader();
+    var chunks = [], total = 0;
+    function pump() {
+      return reader.read().then(function (r) {
+        if (r.done) {
+          var out = new Uint8Array(total), pos = 0;
+          chunks.forEach(function (ch) { out.set(ch, pos); pos += ch.length; });
+          return out;
+        }
+        total += r.value.length;
+        if (total > MAX_SAVED_BYTES) {
+          reader.cancel();
+          throw new Error("the file expands to more than " + kb(MAX_SAVED_BYTES) + "; refusing to unpack it");
+        }
+        chunks.push(r.value);
+        return pump();
+      });
+    }
+    return pump();
+  }
+
   function save(s, container) {
     var c;
     try { c = QBeam3.parseContainer(container); } catch (e) { setError("Unreadable transfer: " + e.message); return Promise.resolve(); }
     var name = safeName(c.filenameUtf8);
     setStatus("Verifying " + name + "…");
-    var bytes = c.encoding === "gzip"
-      ? new Response(new Blob([c.data]).stream().pipeThrough(new DecompressionStream("gzip"))).arrayBuffer()
-      : Promise.resolve(c.data);
+    var bytes = c.encoding === "gzip" ? gunzipCapped(c.data) : Promise.resolve(c.data);
     return bytes.then(function (data) {
       return crypto.subtle.digest("SHA-256", data).then(function (digest) {
         if (hex(digest) !== hex(c.sha256)) {

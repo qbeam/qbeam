@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P2 hardening done; P3 (Android) and P4 (iOS) receiver apps started
-- **Last done:** native Android and iOS receiver apps build and run on emulator/Simulator; Kotlin and Swift codecs pass the shared vectors (2026-10-01)
-- **Next up:** test both apps on real phones, then the trial counter and billing (P3.7/P3.8, P4.2) and phone → laptop sending. Main has unreleased fixes since 0.1.0. P0.12 competitor baseline deferred by user. P0.2 still needs a code of conduct
+- **Last done:** both apps tested on real phones (iPhone 15 277 KB/s, OnePlus 12 288 KB/s, terminal mode works); CLI 0.2.0 released (2026-10-02)
+- **Next up:** beta release track in PLAN.md (Option A: free betas on Play closed test + TestFlight now, trial/unlock built behind a switch, shipped after Gate 2). User: Play + Apple accounts, testers. Claude: privacy page, store copy, signing, uploads. P0.12 competitor baseline still open (CameraFileCopy is on the user's OnePlus)
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules

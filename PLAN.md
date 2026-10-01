@@ -18,7 +18,7 @@ Product and command name: **qbeam** (chosen 2026-09-30; free on PyPI, npm, `.dev
 | P4 iOS app, $19 bundle, Pro web receiver | Q1 2027 | Started: receiver app builds and runs in the Simulator; no StoreKit yet | iOS live; bundle key works on all platforms |
 | P5 Standalone binaries + more channels | Q1–Q2 2027 | Not started | Signed binaries in Scoop/brew/winget |
 
-Rules: don't start paid work (P3 billing) until Gate 2 passes. Each phase ends with its testing checklist green.
+Rules: billing may be **built** now but not **shipped** (switched on in a store build) until Gate 2 passes (decided 2026-10-02, Option A: free betas first, billing behind a switch). The speed half of Gate 2 gates the public launch (P2.17); the installs half gates shipping billing. Each phase ends with its testing checklist green.
 
 ---
 
@@ -145,14 +145,36 @@ Marketing
 - [ ] P2.21 Start weekly short clips; SEO how-to pages ("copy file from VDI without clipboard", etc.)
 - [ ] P2.22 GitHub Sponsors live; CLI prints one sponsor line after success (suppressible with `--quiet`)
 
-**Gate 2:** ≥ 100 KB/s median goodput on the mid-range phone (web sender, best available decoder) at `--speed max`, 10 MB file; 1k installs (PyPI + npm). Don't do the public launch (P2.17) until this passes.
+**Gate 2:** ≥ 100 KB/s median goodput on the mid-range phone (web sender, best available decoder) at `--speed max`, 10 MB file; 1k installs (PyPI + npm). The speed part must pass before the public launch (P2.17); the installs part (which mostly comes from that launch) must pass before billing ships.
+
+---
+
+## Beta release track (Option A, decided 2026-10-02)
+
+Free betas on both stores now, to start Play's 14-day closed-test clock and get real-device feedback; the trial + unlock is built meanwhile behind a switch that's off in beta builds; beta testers keep a free unlock. Production with billing after the closed test, Gate 2 and the competitor check (P3.16).
+
+User (accounts and money)
+- [ ] B.1 Google Play Console account ($25; identity verification can take days). Note: apps with in-app purchases show the developer's physical address publicly
+- [ ] B.2 Apple Developer Program ($99/yr; 1–2 days). The listing shows the legal name as seller
+- [ ] B.3 Recruit ≥ 12 Android testers (opted in for 14 days) and TestFlight testers
+- [ ] B.4 Answer export compliance (app decrypts AES-GCM for the user's own files) and the Play data-safety / content-rating forms
+
+Claude
+- [x] B.5 (done 2026-10-02) Release CLI 0.2.0 (unreleased fixes since 0.1.0)
+- [x] B.6 (done 2026-10-02; support = GitHub issues for now) Privacy page at qbeam.dev/privacy (no data collected, camera used on-device only) and a support page
+- [ ] B.7 Store copy: offline file transfer between your own devices; never framed as getting around security; screenshots from both phones
+- [ ] B.8 Android release signing: upload key kept outside the repo (+ CI secret), Play App Signing, `bundleRelease` AAB in CI
+- [ ] B.9 iOS archive + upload (Release, automatic signing) and a CI build of the archive
+- [ ] B.10 App icons and launch assets at store sizes; version/build numbers synced with scripts/version.py
+- [ ] B.11 Trial + unlock behind a build switch (P3.7/P3.8, P4.2), with beta testers grandfathered to a free unlock
+- [ ] B.12 Upload: Play closed track + TestFlight external beta (needs Beta App Review)
 
 ---
 
 ## P3 — Android app with trial + one-time unlock (Dec – mid Jan)
 
 Development
-- [ ] P3.1 Kotlin + CameraX; native decoding via zxing-cpp (multi-code) with ML Kit as an option; high-res capture, continuous autofocus
+- [x] P3.1 (done 2026-10-01: CameraX 1080p 16:9, 4-worker zxing-cpp pool, 288 KB/s on OnePlus 12) Kotlin + CameraX; native decoding via zxing-cpp (multi-code) with ML Kit as an option; high-res capture, continuous autofocus
 - [x] P3.2 (done 2026-10-01: android/core, JUnit on v3.json) Kotlin codec port (fountain + v3 frames); passes all shared test vectors
 - [ ] P3.3 Save via Storage Access Framework to a user-chosen folder; share sheet; transfer history
 - [ ] P3.4 Archive extraction in-app (tar, gz, xz) with zip-slip protection and size caps
@@ -184,7 +206,7 @@ Marketing
 ## P4 — iOS, $19 bundle, Pro web receiver (Q1 2027)
 
 Development
-- [ ] P4.1 Swift + AVFoundation; Vision `VNDetectBarcodesRequest` (multi-code); Swift codec port on shared vectors
+- [x] P4.1 (done 2026-10-01: Vision was ~45 KB/s, replaced by vendored zxing-cpp at 60 fps, 277 KB/s on iPhone 15) Swift + AVFoundation; ~~Vision~~ zxing-cpp; Swift codec port on shared vectors
 - [ ] P4.2 Same trial model with StoreKit 2 one-time purchase; Files app save; archive extraction
 - [ ] P4.3 $19 bundle: sell via Lemon Squeezy / Paddle; issue Ed25519-signed keys; all apps verify offline
 - [ ] P4.4 Pro web receiver: fast WASM decoder PWA unlocked by bundle key (reaches iPhone users before the iOS app)
@@ -255,6 +277,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-02 · Released 0.2.0 (PyPI, npm, GitHub with .pyz). Terminal mode tested to phone. Chose Option A: free betas on Play closed test + TestFlight now, trial/unlock built behind a switch and shipped after Gate 2 (rule and Gate 2 wording updated; Beta release track B.1–B.12 added). Privacy page at qbeam.dev/privacy · Next: user creates Play + Apple accounts (B.1/B.2); Claude: store copy, signing, CI bundles (B.7–B.10)
 - 2026-10-01 · Android on a OnePlus 12: ~140 KB/s at first (CameraX picked 1920×1440, one decode thread); with 16:9 1080p and a 4-worker zxing pool it reached 288 KB/s for 7.6 MB in 8 s, even though the camera only offers apps 30 fps. Both apps now show time and KB/s on the Saved line. iPhone 15: 277 KB/s · Next: trial counter + billing (P3.7/P3.8, P4.2), phone → laptop sending; competitor baseline (P0.12) to confirm parity
 - 2026-10-01 · iOS speed: Vision decoded ~5 frames/s (~750 ms each) → ~45 KB/s; switched to zxing-cpp worker pool (60 fps in, ~12 ms/frame, ~350 codes/s) → 277 KB/s on iPhone 15 vs 246 KB/s for the web receiver. Fixed 30 fps cap (.inputPriority) and an assert() crash in zxing's QR sampler (vendored zxing-cpp 3.1.1 with NDEBUG) · Next: confirm no crashes over several transfers, then Android on a real phone
 - 2026-10-01 · First real-device transfer: iOS app on iPhone 15 (free personal team, installed via devicectl) received a 399 KB file from the Python sender; SHA-256 verified · Next: record app goodput vs the web receiver on the same phone, then Android on a real phone

@@ -40,6 +40,8 @@ jobs:
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/v3.js
       - name: Terminal mode decoded by zxing
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/terminal_decode.js
+      - name: Fuzz the receiver's parsers
+        run: node js/test/fuzz.js
       - name: Versions match
         run: '"$(uv python find ${{ matrix.python }})" scripts/version.py'
 
@@ -61,6 +63,18 @@ jobs:
       - name: Fail if the committed copy is stale
         run: |
           git diff --exit-code web/dist/decoder.html || { echo "::error::web/dist/decoder.html is stale; run python3 web/build.py"; exit 1; }
+
+  optics:
+    # Real sender frames through a simulated phone camera, decoded by the receiver's zxing build. Fails when a
+    # change makes codes harder to read (PLAN P2.13 / P2.15a).
+    name: simulated camera
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+      - run: node js/test/optics.js
 
   package:
     name: build packages

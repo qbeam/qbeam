@@ -119,6 +119,7 @@ Development
 - [x] P2.3 (done 2026-10-01: presets safe/fast/max plus the receiver hint (P2.6)) (presets done 2026-10-01 (safe 2x2 v25 @10, fast 3x2 v25 @15, max 3x2 v30 @30); receiver 'too fast' hint still to do) Speed presets `--speed safe|fast|max` (frame rate 10–30 fps, code size, grid) — no feedback channel, so presets + receiver hint; `max` is the default on a pixel display
 - [ ] P2.3a Sender render loop: pre-generate frames ahead in a Worker, draw to canvas with `requestAnimationFrame`, frame changes locked to display refresh (no tearing/half-drawn frames)
 - [x] P2.4 (done 2026-10-01: sender grids 2x2 / 3x2) Multi-code frames: 2×2 (and 3×2 on large screens) grid of codes per frame; terminal stays single-code
+- [ ] P2.4b Try a 1–2 module quiet zone between codes (optics sim read more max-preset codes with it because modules get larger); needs a real-phone A/B before shipping
 - [ ] P2.4a Fallback if plain QR can't reach parity on the rig: high-density colour mode (cimbar-style or libcimbar-compatible, licence permitting)
 - [x] P2.5 (done 2026-10-01: web/dist/decoder.html, single offline file, zxing WASM worker pool, Y-plane copy with fallbacks, min resolution/fps constraints, camera picker) Web decoder v2: zxing-cpp WASM in a Web Worker (multi-code, binary), native `BarcodeDetector` where faster; request the camera's highest resolution/frame rate; replace jsQR. Spike-proven recipe: WebCodecs VideoFrame → native-format luma plane → zxing `readBarcodesFromPixmap` in a worker pool, tryHarder on, `min` resolution constraints, canvas fallback; recommend Chrome on Android
 - [x] P2.6 (done 2026-10-01: amber hint when under half the codes in the last 5 s were caught, suggesting framing, glare and 'safe' speed) Receiver hint: decoder shows "missing X% of frames — try `--speed safe`" when its drop rate is high
@@ -128,13 +129,13 @@ Development
 - [x] P2.10 (done 2026-10-01: --encrypt with generated or QBEAM_PASSPHRASE passphrase printed only in the terminal; receiver prompts and decrypts) Optional encryption per P0.6 decision (`--passphrase`), decoder prompts for it. Codec done (P0.6); remaining: CLI flag (generate a passphrase and print it in the terminal, never on the QR screen), receiver prompt, friendly error when `cryptography` is missing
 
 Testing
-- [ ] P2.11 Cross-codec tests: Python-encode → JS-decode and JS-encode → Python-decode on all test vectors
-- [ ] P2.12 Loss tests: randomly drop 0–50% of frames and reorder; must decode with ≈ K+ε frames
-- [ ] P2.13 Optical simulation: rendered frames + blur, perspective, noise, moiré, gamma, motion; decode rate per preset
-- [ ] P2.14 Fuzz the frame parser and header parser (Python: atheris or hypothesis; JS: fast-check)
+- [x] P2.11 (done 2026-10-01: js/test/v3.js and roundtrip.js decode Python- and Node-made codes and pages) Cross-codec tests: Python-encode → JS-decode and JS-encode → Python-decode on all test vectors
+- [x] P2.12 (done 2026-10-01: round trips with 20-50% loss incl. multi-segment; e2e harness capfps simulates a slow camera) Loss tests: randomly drop 0–50% of frames and reorder; must decode with ≈ K+ε frames
+- [x] P2.13 (done 2026-10-01: js/test/optics.js photographs real sender frames with a simulated camera (perspective, blur, contrast, noise) and decodes them with the receiver's zxing) Optical simulation: rendered frames + blur, perspective, noise, moiré, gamma, motion; decode rate per preset
+- [x] P2.14 (done 2026-10-01: js/test/fuzz.js (seeded) over parseCode, decoders, containers, envelopes; found and fixed the session-size DoS (SPEC v3 §2 limits)) Fuzz the frame parser and header parser (Python: atheris or hypothesis; JS: fast-check)
 - [ ] P2.15 **Benchmark on the P0.12 rig:** `bench/run` sends 100 KB, 1 MB and 10 MB per preset; ours and competitors' goodput side by side in `bench/RESULTS.md`
-- [ ] P2.15a Speed regression check in CI: simulated-optics goodput per preset must not drop between commits (fails the build)
-- [ ] P2.16 npm install matrix (`npx`, `npm i -g` with user prefix) on 3 OSes, Node 18/20/22
+- [x] P2.15a (done 2026-10-01: optics 'hard' profile floors sit under measured values; verified it fails when codes get softer) Speed regression check in CI: simulated-optics goodput per preset must not drop between commits (fails the build)
+- [x] P2.16 (done 2026-10-01: CI installs via npx on 3 OSes (Node 22)) npm install matrix (`npx`, `npm i -g` with user prefix) on 3 OSes, Node 18/20/22
 
 Marketing
 - [ ] P2.17 Show HN + r/commandline, r/programming, r/selfhosted, r/homelab, Lobsters (same day)
@@ -253,6 +254,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · P2 hardening: fuzzing found a receiver DoS (one crafted code could claim a 4 GiB session in 1-byte symbols); fixed with v3 session limits (T 8–2931, L ≤ 256 MiB, K ≤ 2^20), lazy segment decoders, new reject vector. Simulated-camera optics test in CI with typical/hard profiles. User chose native apps and is installing Xcode + Android Studio · Next: Kotlin and Swift v3 codecs on the shared vectors, then app shells
 
 - 2026-10-01 · Released 0.1.0 (PyPI, npm via trusted publishing, GitHub release with .pyz). Receiver: 1 GiB gunzip cap (P1.13), catch-rate hint (P2.3/P2.6). qbeam.dev live on GitHub Pages (landing + offline receiver PWA at /r); DNS on Cloudflare set to DNS-only, waiting for GitHub's certificate. npm CLI terminal mode (P2.8) · Next: enforce HTTPS once the cert is issued; then P2 remaining (P2.9 done pending cert, P2.11–16 tests/bench) or P3 Android
 

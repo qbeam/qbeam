@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P1 (in progress); P0 done except user items
-- **Last done:** 0.1.0 released; qbeam.dev hosting (GitHub Pages, DNS-only on Cloudflare); receiver catch-rate hint and gunzip cap; npm terminal mode (2026-10-01)
-- **Next up:** once GitHub issues the qbeam.dev certificate, enforce HTTPS (gh api -X PUT repos/qbeam/qbeam/pages -F https_enforced=true); then P2.11–16 (loss/fuzz/bench tests) or P3 Android. User items: phone test of 0.1.0, Windows console --tty, P0.2, P0.12
+- **Last done:** P2 hardening: v3 session limits (DoS fix), fuzz tests, simulated-camera optics test in CI (2026-10-01)
+- **Next up:** native apps (user chose native; installing Xcode + Android Studio): Swift and Kotlin v3 codecs checked against protocol/test-vectors, then camera + zxing-cpp/Vision receivers. Enforce HTTPS on qbeam.dev once GitHub issues the cert. User items: phone test of 0.1.0, Windows console --tty, P0.2, P0.12
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
@@ -51,7 +51,7 @@ fast 3x2 v25 @15, max 3x2 v30 @30 (T = capacity − 22).
 
 ## Tests and releases
 
-- `python3 -m unittest discover -s py/tests -v`, `node js/test/roundtrip.js`, `node js/test/v3.js`, `node js/test/terminal_decode.js` (repo root); CI runs them on every PR, plus the encryption tests with `cryptography` installed. Browser e2e: `web/test/e2e.html` (manual, needs a visible window).
+- `python3 -m unittest discover -s py/tests -v`, `node js/test/roundtrip.js`, `node js/test/v3.js`, `node js/test/terminal_decode.js`, `node js/test/fuzz.js`, `node js/test/optics.js` (repo root); CI runs them on every PR, plus the encryption tests with `cryptography` installed. Browser e2e: `web/test/e2e.html` (manual, needs a visible window).
 - Release = bump with `python3 scripts/version.py X.Y.Z` and merge to main. See docs/RELEASING.md. Never publish by hand after the first npm version.
 - After editing receiver files, `web/vendor/zxing-*` or `js/qbeam3.js`, run `python3 web/build.py` and commit `web/dist/decoder.html` (CI checks it).
 - Python file I/O always passes `encoding="utf-8"` (Windows defaults to cp1252).

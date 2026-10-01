@@ -18,7 +18,7 @@ Product and command name: **qbeam** (chosen 2026-09-30; free on PyPI, npm, `.dev
 | P4 iOS app, $19 bundle, Pro web receiver | Q1 2027 | Started: receiver app builds and runs in the Simulator; no StoreKit yet | iOS live; bundle key works on all platforms |
 | P5 Standalone binaries + more channels | Q1–Q2 2027 | Not started | Signed binaries in Scoop/brew/winget |
 
-Rules: billing may be **built** now but not **shipped** (switched on in a store build) until Gate 2 passes (decided 2026-10-02, Option A: free betas first, billing behind a switch). The speed half of Gate 2 gates the public launch (P2.17); the installs half gates shipping billing. Each phase ends with its testing checklist green.
+Rules: billing may be **built** now but not **shipped** (switched on in a store build) until Gate 2 passes. Free channels (GitHub APK, IzzyOnDroid, F-Droid, web receiver) come before the paid stores (decided 2026-10-02). The speed half of Gate 2 gates the public launch (P2.17); the installs half gates shipping billing. Each phase ends with its testing checklist green.
 
 ---
 
@@ -149,24 +149,36 @@ Marketing
 
 ---
 
-## Beta release track (Option A, decided 2026-10-02)
+## Release track (decided 2026-10-02, revised the same day)
 
-Free betas on both stores now, to start Play's 14-day closed-test clock and get real-device feedback; the trial + unlock is built meanwhile behind a switch that's off in beta builds; beta testers keep a free unlock. Production with billing after the closed test, Gate 2 and the competitor check (P3.16).
+**Order:** web receiver + Android APK first, through free channels (GitHub releases, IzzyOnDroid, F-Droid); public
+launch once a mid-range phone clears Gate 2's speed bar; Google Play and the App Store (with the trial + unlock, B.11)
+later, when demand shows. iPhone users use the web receiver (qbeam.dev/r) until then. Android flavours: **foss**
+(default; no Google libraries, no trial) for the free channels, **play** (Play Billing, trial switch) for Google Play.
+One release key signs every channel so they stay update-compatible (docs/RELEASING.md).
 
-User (accounts and money)
-- [ ] B.1 Google Play Console account ($25; identity verification can take days). Note: apps with in-app purchases show the developer's physical address publicly
+Free channels
+- [x] F.1 (done 2026-10-02) foss / play flavours; version from scripts/version.py; release signing from env; CI checks no network permission (both) and no billing (foss)
+- [x] F.2 (done 2026-10-02) Release workflow attaches the signed foss APK + SHA-256 to each GitHub release (skips without the key secret; refuses the debug key)
+- [ ] F.3 **User:** generate the release key and add the two GitHub secrets (docs/RELEASING.md), then bump the version so the first APK ships
+- [ ] F.4 qbeam.dev + README: Android download link, signing-certificate fingerprint, how to verify the SHA-256
+- [ ] F.5 Store text at `fastlane/metadata/android/` (where F-Droid / IzzyOnDroid look); reproducible build check
+- [ ] F.6 IzzyOnDroid inclusion request (picks up APKs from GitHub releases; usually days)
+- [ ] F.7 F-Droid: build recipe + merge request to fdroiddata (user needs a GitLab account; review takes weeks). Risk: zxing-cpp's prebuilt native libs may need building from source in the recipe
+- [ ] F.8 Measure a mid-range Android phone (Gate 2 speed half), then the public launch (P2.17)
+
+Paid stores (later)
+- [ ] B.1 Google Play Console account ($25; identity verification can take days). Apps with in-app purchases show the developer's physical address publicly
 - [ ] B.2 Apple Developer Program ($99/yr; 1–2 days). The listing shows the legal name as seller
-- [ ] B.3 Recruit ≥ 12 Android testers (opted in for 14 days) and TestFlight testers
-- [ ] B.4 Answer export compliance (app decrypts AES-GCM for the user's own files) and the Play data-safety / content-rating forms
-
-Claude
-- [x] B.5 (done 2026-10-02) Release CLI 0.2.0 (unreleased fixes since 0.1.0)
-- [x] B.6 (done 2026-10-02; support = GitHub issues for now) Privacy page at qbeam.dev/privacy (no data collected, camera used on-device only) and a support page
-- [x] B.7 (done 2026-10-02: store/ in fastlane layout, length check in CI, 3 captioned screenshots per store from real transfers) Store copy: offline file transfer between your own devices; never framed as getting around security; screenshots from both phones
-- [ ] B.8 Android release signing: upload key kept outside the repo (+ CI secret), Play App Signing, `bundleRelease` AAB in CI
+- [ ] B.3 Recruit ≥ 12 Android testers (Play's 14-day closed test) and TestFlight testers
+- [ ] B.4 Export compliance (app decrypts AES-GCM for the user's own files) and Play data-safety / content-rating forms
+- [x] B.5 (done 2026-10-02) Release CLI 0.2.0
+- [x] B.6 (done 2026-10-02; support = GitHub issues for now) Privacy page at qbeam.dev/privacy
+- [x] B.7 (done 2026-10-02: store/ in fastlane layout, length check in CI, 3 captioned screenshots per store from real transfers) Store copy and screenshots
+- [ ] B.8 Play: upload the release key to Play App Signing, `bundlePlayRelease` AAB in CI
 - [ ] B.9 iOS archive + upload (Release, automatic signing) and a CI build of the archive
-- [x] B.10 (done 2026-10-02: iOS AppIcon 1024, Play icon 512 + feature graphic 1024x500, from scripts/store_icons.py; versions sync is part of B.8/B.9) App icons and launch assets at store sizes; version/build numbers synced with scripts/version.py
-- [x] B.11 (done 2026-10-02: Trial in android/core + QBeamKit with tests; Play Billing 9.1.0 and StoreKit 2; switch -Pqbeam.trial / QBEAM_TRIAL, off by default; paywall + counter checked on OnePlus and Simulator; real purchases untested until the store products exist) Trial + unlock behind a build switch (P3.7/P3.8, P4.2), with beta testers grandfathered to a free unlock
+- [x] B.10 (done 2026-10-02) App icons (iOS AppIcon, Play icon + feature graphic)
+- [x] B.11 (done 2026-10-02: Trial in core + QBeamKit with tests; Play Billing 9.1.0 and StoreKit 2; switch off by default; real purchases untested until the store products exist) Trial + unlock behind a build switch; free-channel installs count as beta testers and keep a free unlock
 - [ ] B.12 Upload: Play closed track + TestFlight external beta (needs Beta App Review)
 
 ---
@@ -277,6 +289,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-02 · Release order changed: web receiver + Android APK through free channels first (GitHub releases, IzzyOnDroid, F-Droid), paid stores later. Android foss/play flavours (foss: no Google libraries; CI-checked), version from scripts/version.py, release workflow attaches a signed foss APK when the key secrets exist (tested with a throwaway key; foss runs on OnePlus) · Next: user generates the release key + secrets (F.3); Claude: download link + fingerprint (F.4), fastlane metadata (F.5), IzzyOnDroid/F-Droid (F.6/F.7)
 - 2026-10-02 · B.10 icons (iOS AppIcon, Play icon + feature graphic). B.11 trial: 10 free transfers then a one-time unlock, shared Trial in Kotlin + Swift (tests), Play Billing + StoreKit 2, build switch off by default, beta installs grandfathered, paywall links to the web receiver. Play Billing pulls Google's datatransport logging (INTERNET); user chose to strip the permission — billing still binds to the Play Store, no crash on OnePlus; CI fails if INTERNET returns · Next: user creates Play + Apple accounts and the dev.qbeam.unlock product; Claude: B.8/B.9 signing + CI bundles
 - 2026-10-02 · Store copy + screenshots (B.7): Play and App Store text in store/ (fastlane layout, CI length check), 3 captioned screenshots per store from real iPhone 15 / OnePlus 12 transfers. Fixed two app bugs found while capturing: Saved-line speed included passphrase typing (now ends at the last needed code; tests in Kotlin + Swift), and iOS copy names split .tar.gz (now "name 2.tar.gz") · Next: B.10 icons at store sizes, B.8/B.9 signing + CI bundles, B.11 trial behind a switch; user: Play + Apple accounts
 - 2026-10-02 · Released 0.2.0 (PyPI, npm, GitHub with .pyz). Terminal mode tested to phone. Chose Option A: free betas on Play closed test + TestFlight now, trial/unlock built behind a switch and shipped after Gate 2 (rule and Gate 2 wording updated; Beta release track B.1–B.12 added). Privacy page at qbeam.dev/privacy · Next: user creates Play + Apple accounts (B.1/B.2); Claude: store copy, signing, CI bundles (B.7–B.10)

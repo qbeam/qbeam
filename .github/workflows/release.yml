@@ -83,8 +83,52 @@ jobs:
       - name: Publish
         run: npm publish ./dist/qbeam-*.tgz --access public
 
+  android-apk:
+    # The Android app (foss flavour: no Google libraries) as qbeam-<version>.apk on the GitHub release, signed with
+    # the release key from the repo secrets. Without the secrets it skips with a warning; a failure here never blocks
+    # the CLI release (continue-on-error). Key setup: docs/RELEASING.md.
+    needs: [plan, ci]
+    if: needs.plan.outputs.pypi == 'true' || needs.plan.outputs.npm == 'true'
+    runs-on: ubuntu-latest
+    continue-on-error: true
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - name: Android SDK platform 36
+        run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+      - name: Build and sign the APK
+        env:
+          KEYSTORE_B64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+          QBEAM_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          QBEAM_KEY_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          QBEAM_KEY_ALIAS: qbeam
+          VERSION: ${{ needs.plan.outputs.version }}
+        run: |
+          if [ -z "$KEYSTORE_B64" ]; then
+            echo "::warning::No ANDROID_KEYSTORE_BASE64 secret, so no APK in this release (docs/RELEASING.md)"; exit 0
+          fi
+          echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
+          export QBEAM_KEYSTORE="$RUNNER_TEMP/release.jks"
+          (cd android && ./gradlew :app:assembleFossRelease --console=plain)
+          apk=android/app/build/outputs/apk/foss/release/app-foss-release.apk
+          certs=$("$ANDROID_HOME/build-tools/36.0.0/apksigner" verify --print-certs "$apk")
+          echo "$certs"
+          if echo "$certs" | grep -q "CN=Android Debug"; then echo "::error::APK is signed with the debug key"; exit 1; fi
+          mkdir -p apk-dist
+          cp "$apk" "apk-dist/qbeam-$VERSION.apk"
+          (cd apk-dist && sha256sum "qbeam-$VERSION.apk" > "qbeam-$VERSION.apk.sha256")
+          rm -f "$RUNNER_TEMP/release.jks"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-apk
+          path: apk-dist/
+          if-no-files-found: ignore
+
   github-release:
-    needs: [plan, publish-pypi, publish-npm]
+    needs: [plan, publish-pypi, publish-npm, android-apk]
     if: ${{ !failure() && !cancelled() && (needs.plan.outputs.pypi == 'true' || needs.plan.outputs.npm == 'true') }}
     runs-on: ubuntu-latest
     permissions:

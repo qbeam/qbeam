@@ -64,3 +64,33 @@ so only the workflow can publish.
 
 The `pypi` and `npm` environments are created automatically on first use. To require a manual approval before
 anything is published, add yourself as a required reviewer under repo Settings → Environments → `pypi` / `npm`.
+
+## Android APK (GitHub releases)
+
+Each release also attaches `qbeam-<version>.apk` (+ `.sha256`): the **foss** flavour (no Google libraries, no trial),
+built and signed by the `android-apk` job in `release.yml`. The app's `versionName` / `versionCode` come from the same
+version (`scripts/version.py`; code = MAJOR×1,000,000 + MINOR×1,000 + PATCH).
+
+### One-time: the release key
+
+One key signs the app in **every** channel: GitHub releases, IzzyOnDroid, F-Droid (via reproducible builds) and later
+Google Play (upload it to Play App Signing as your own key). Android only installs an update signed with the same key,
+so **losing it means users can't update**: keep the `.jks` file and its password in a password manager and an offline
+backup. Never commit it.
+
+```bash
+keytool -genkeypair -v -keystore ~/qbeam-release.jks -alias qbeam -keyalg RSA -keysize 4096 \
+  -validity 36500 -storetype PKCS12 -dname "CN=qbeam"     # asks for a password (used for key and store)
+base64 -i ~/qbeam-release.jks | gh secret set ANDROID_KEYSTORE_BASE64 --repo qbeam/qbeam
+gh secret set ANDROID_KEYSTORE_PASSWORD --repo qbeam/qbeam   # asks for the same password
+keytool -list -v -keystore ~/qbeam-release.jks -alias qbeam | grep SHA256   # the fingerprint to publish
+```
+
+Without the secrets the job skips the APK with a warning; it never blocks the CLI release, and it refuses to publish
+an APK signed with the debug key.
+
+### Local builds
+
+`./gradlew :app:assembleFossRelease` (in `android/`) signs with the debug key unless `QBEAM_KEYSTORE`,
+`QBEAM_KEYSTORE_PASSWORD`, `QBEAM_KEY_PASSWORD` and `QBEAM_KEY_ALIAS` are set. The **play** flavour
+(`assemblePlayRelease`, add `-Pqbeam.trial=true` for the trial) is for Google Play later.

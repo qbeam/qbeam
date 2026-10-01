@@ -101,18 +101,22 @@ jobs:
       - name: Android SDK platform 36
         # `|| true`: yes dies of SIGPIPE when sdkmanager exits first, which fails the step under pipefail.
         run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
-      - name: Build the app (debug APK; beta and store/trial switch)
+      - name: Build the app (foss, and play with the trial switch on)
+        working-directory: android
+        run: ./gradlew :app:assembleFossDebug :app:assemblePlayDebug -Pqbeam.trial=true --console=plain
+      - name: The app never gains network access; foss has no Google billing (privacy page, F-Droid)
         working-directory: android
         run: |
-          ./gradlew :app:assembleDebug --console=plain
-          ./gradlew :app:assembleDebug -Pqbeam.trial=true --console=plain
-      - name: The app never gains network access (privacy page, store listings)
-        working-directory: android
-        run: |
-          m=app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml
-          grep -E 'uses-permission' "$m"
-          if grep -qE 'android.permission.(INTERNET|ACCESS_NETWORK_STATE)' "$m"; then
-            echo "::error::The merged manifest requests network access. A dependency added it; remove it in AndroidManifest.xml (tools:node=\"remove\") or rethink the dependency."; exit 1
+          d=app/build/intermediates/merged_manifest
+          for pair in foss:Foss play:Play; do
+            f=${pair%%:*}; m=$d/${f}Debug/process${pair##*:}DebugMainManifest/AndroidManifest.xml
+            echo "== $f"; grep -E 'uses-permission' "$m"
+            if grep -qE 'android.permission.(INTERNET|ACCESS_NETWORK_STATE)' "$m"; then
+              echo "::error::The $f manifest requests network access. A dependency added it; remove it in AndroidManifest.xml (tools:node=\"remove\") or rethink the dependency."; exit 1
+            fi
+          done
+          if grep -q 'com.android.vending.BILLING' $d/fossDebug/processFossDebugMainManifest/AndroidManifest.xml; then
+            echo "::error::The foss flavour picked up Google Play Billing; keep billing dependencies playImplementation only."; exit 1
           fi
 
   optics:

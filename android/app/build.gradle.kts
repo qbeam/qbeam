@@ -4,6 +4,15 @@ plugins {
     kotlin("plugin.compose")
 }
 
+// One version for everything: the CLI's (scripts/version.py). versionCode = MAJOR*1_000_000 + MINOR*1_000 + PATCH.
+val qbeamVersion: MatchResult = Regex("""__version__ = "(\d+)\.(\d+)\.(\d+)"""")
+    .find(rootDir.resolve("../py/src/qbeam/__init__.py").readText()) ?: error("no __version__ in py/src/qbeam/__init__.py")
+val (vMajor, vMinor, vPatch) = qbeamVersion.destructured
+
+// Release signing from the environment (the release workflow decodes the key from a GitHub secret). Without it,
+// local release builds use the debug key, which is fine for speed tests and never published.
+val releaseKeystore: String? = System.getenv("QBEAM_KEYSTORE")
+
 android {
     namespace = "dev.qbeam.app"
     compileSdk = 36
@@ -12,19 +21,41 @@ android {
         applicationId = "dev.qbeam.app"
         minSdk = 29          // Android 10+: scoped storage (MediaStore Downloads) without extra permissions
         targetSdk = 36
-        versionCode = 1
-        versionName = "0.1.0"
-        // The trial switch (PLAN.md B.11): off for beta builds; a store release builds with -Pqbeam.trial=true.
-        buildConfigField("boolean", "TRIAL", (findProperty("qbeam.trial") ?: "false").toString())
+        versionCode = vMajor.toInt() * 1_000_000 + vMinor.toInt() * 1_000 + vPatch.toInt()
+        versionName = "$vMajor.$vMinor.$vPatch"
+    }
+
+    // foss: GitHub releases, IzzyOnDroid, F-Droid. No Google libraries at all, no trial. The default.
+    // play: Google Play, with Play Billing and the trial switch (PLAN.md B.11): -Pqbeam.trial=true turns it on.
+    flavorDimensions += "store"
+    productFlavors {
+        create("foss") {
+            dimension = "store"
+            isDefault = true
+            buildConfigField("boolean", "TRIAL", "false")
+        }
+        create("play") {
+            dimension = "store"
+            buildConfigField("boolean", "TRIAL", (findProperty("qbeam.trial") ?: "false").toString())
+        }
+    }
+
+    signingConfigs {
+        create("release") {
+            if (releaseKeystore != null) {
+                storeFile = file(releaseKeystore)
+                storePassword = System.getenv("QBEAM_KEYSTORE_PASSWORD")
+                keyAlias = System.getenv("QBEAM_KEY_ALIAS")
+                keyPassword = System.getenv("QBEAM_KEY_PASSWORD")
+            }
+        }
     }
 
     buildTypes {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
-            // Debug key so optimised builds can be installed for speed tests (debuggable builds run slower).
-            // Replace with the Play upload key when store releases start (P3.8).
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (releaseKeystore != null) "release" else "debug")
         }
     }
     compileOptions {
@@ -32,6 +63,11 @@ android {
         targetCompatibility = JavaVersion.VERSION_17
     }
     buildFeatures { compose = true; buildConfig = true }
+    // The dependency-info block is encrypted for Google; F-Droid and IzzyOnDroid reject APKs that carry it.
+    dependenciesInfo {
+        includeInApk = false
+        includeInBundle = true
+    }
 }
 
 kotlin { jvmToolchain(17) }
@@ -49,5 +85,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.activity:activity-compose:1.11.0")
-    implementation("com.android.billingclient:billing:9.1.0") // adds only com.android.vending.BILLING, no internet
+    "playImplementation"("com.android.billingclient:billing:9.1.0") // its INTERNET is stripped in AndroidManifest.xml
 }

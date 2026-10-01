@@ -13,7 +13,7 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P2 hardening done; P3 (Android) and P4 (iOS) receiver apps started
 - **Last done:** store copy + screenshots, icons, and the trial/unlock behind a switch (Play Billing + StoreKit 2; Android INTERNET stripped, CI-checked) (2026-10-02)
-- **Next up:** B.8/B.9 release signing + CI bundles, then uploads (B.12) once the user has Play + Apple accounts and has created product `dev.qbeam.unlock` in both stores. Trial switch: Android `-Pqbeam.trial=true`, iOS `QBEAM_TRIAL=YES`; leave off for betas. P0.12 competitor baseline still open
+- **Next up:** release track in PLAN.md (free channels first): user generates the Android release key + GitHub secrets (F.3, docs/RELEASING.md); then download link + fingerprint (F.4), fastlane metadata (F.5), IzzyOnDroid + F-Droid (F.6/F.7), mid-range phone speed check then public launch (F.8). Paid stores later. P0.12 competitor baseline still open
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
@@ -43,7 +43,7 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 | `web/build.py` → `web/dist/decoder.html` | Builds the single-file receiver (~1.3 MB); generated, CI checks it's current |
 | `web/test/e2e.html` | Browser end-to-end test: real sender page → real receiver (see web/README.md) |
 | `protocol/SPEC.md`, `protocol/test-vectors/` | Normative spec (v3 current, v2 legacy) and vectors |
-| `android/` | Gradle: `:core` (Kotlin v3 codec + Receiver, JUnit) and `:app` (CameraX + zxing-cpp receiver, Compose) |
+| `android/` | Gradle: `:core` (Kotlin v3 codec + Receiver + Trial, JUnit) and `:app` (CameraX + zxing-cpp receiver, Compose). Flavours: `foss` (default, no Google libraries; GitHub/F-Droid) and `play` (Play Billing + trial switch `-Pqbeam.trial=true`) |
 | `ios/QBeamKit`, `ios/App` | Swift v3 codec + Receiver (`swift test --disable-sandbox`); SwiftUI receiver app from `App/project.yml` (run `xcodegen`; the .xcodeproj is gitignored); camera → zxing-cpp worker pool. `ios/ZXingCpp` is vendored zxing-cpp 3.1.1 built with NDEBUG (its asserts crashed the app). Build Release for speed tests |
 | `bench/` | Speed spike (`bench/spike`), fountain benchmark (`bench/protocol`), results (`bench/RESULTS.md`) |
 

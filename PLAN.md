@@ -255,6 +255,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-01 · First real-device transfer: iOS app on iPhone 15 (free personal team, installed via devicectl) received a 399 KB file from the Python sender; SHA-256 verified · Next: record app goodput vs the web receiver on the same phone, then Android on a real phone
 - 2026-10-01 · Native receivers: Kotlin and Swift v3 codecs pass the shared vectors; Android app (CameraX + zxing-cpp, saves to Downloads/qbeam) runs on the emulator; iOS app (AVFoundation 1080p/60 + Vision + QRPayload, saves to Files) builds via XcodeGen and runs in the Simulator; CI builds both. Not yet tested with a real camera · Next: real-phone tests on both apps, then trial counter + billing (P3.7/P3.8, P4.2), phone → laptop sending
 - 2026-10-01 · P2 hardening: fuzzing found a receiver DoS (one crafted code could claim a 4 GiB session in 1-byte symbols); fixed with v3 session limits (T 8–2931, L ≤ 256 MiB, K ≤ 2^20), lazy segment decoders, new reject vector. Simulated-camera optics test in CI with typical/hard profiles. User chose native apps and is installing Xcode + Android Studio · Next: Kotlin and Swift v3 codecs on the shared vectors, then app shells
 

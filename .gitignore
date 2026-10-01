@@ -53,3 +53,10 @@ _site/
 # Swift package builds
 ios/**/.build/
 .swiftpm/
+
+# Gradle / Android Studio
+android/.gradle/
+android/**/build/
+android/local.properties
+android/.idea/
+*.iml

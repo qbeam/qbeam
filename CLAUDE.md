@@ -44,7 +44,7 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 | `web/test/e2e.html` | Browser end-to-end test: real sender page → real receiver (see web/README.md) |
 | `protocol/SPEC.md`, `protocol/test-vectors/` | Normative spec (v3 current, v2 legacy) and vectors |
 | `android/` | Gradle: `:core` (Kotlin v3 codec + Receiver, JUnit) and `:app` (CameraX + zxing-cpp receiver, Compose) |
-| `ios/QBeamKit`, `ios/App` | Swift v3 codec + Receiver (`swift test --disable-sandbox`); SwiftUI receiver app from `App/project.yml` (run `xcodegen`; the .xcodeproj is gitignored) |
+| `ios/QBeamKit`, `ios/App` | Swift v3 codec + Receiver (`swift test --disable-sandbox`); SwiftUI receiver app from `App/project.yml` (run `xcodegen`; the .xcodeproj is gitignored); camera → zxing-cpp worker pool. `ios/ZXingCpp` is vendored zxing-cpp 3.1.1 built with NDEBUG (its asserts crashed the app). Build Release for speed tests |
 | `bench/` | Speed spike (`bench/spike`), fountain benchmark (`bench/protocol`), results (`bench/RESULTS.md`) |
 
 Protocol: senders and the receiver speak **v3** only (binary codes: 18-byte header + symbol + CRC-32; segmented fountain

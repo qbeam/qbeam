@@ -1,10 +1,8 @@
-// Camera → Vision → QR bytes. AVFoundation at 1080p and up to 60 fps; each frame's luma plane is copied out (freeing the
-// camera buffer at once) and decoded on a pool of workers, like the web receiver's zxing worker pool. QR binary content is
-// read from the error-corrected codewords (QRPayload), since Vision's string payload can't carry binary data.
+// Camera → zxing-cpp → QR bytes. AVFoundation at 1080p and up to 60 fps; each frame's luma plane is copied out (freeing the
+// camera buffer at once) and decoded on a pool of zxing-cpp workers, like the web receiver's worker pool and the Android
+// app. (Vision was tried first: ~750 ms per 1080p frame with a 3x2 grid of v30 codes, about 50 KB/s.)
 import AVFoundation
-import CoreImage
-import QBeamKit
-import Vision
+import ZXingCpp
 
 final class CameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelegate {
     /// Per-second summary, also appended to Library/Caches/scan-stats.log for pulling off the device.
@@ -20,13 +18,18 @@ final class CameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
 
     private final class Worker {
         let queue: DispatchQueue
-        let request: VNDetectBarcodesRequest
+        let reader: ZXIBarcodeReader
         var busy = false
         var buffer: CVPixelBuffer?
         init(_ i: Int) {
             queue = DispatchQueue(label: "qbeam.decode.\(i)", qos: .userInitiated)
-            request = VNDetectBarcodesRequest()
-            request.symbologies = [.qr]
+            let o = ZXIReaderOptions()
+            o.formats = [NSNumber(value: ZXIFormat.QR_CODE.rawValue)]
+            o.tryHarder = true
+            o.tryRotate = false
+            o.tryInvert = false
+            o.maxNumberOfSymbols = 16
+            reader = ZXIBarcodeReader(options: o)
         }
     }
 
@@ -55,6 +58,17 @@ final class CameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
             return "No camera available on this device."
         }
         do {
+            session.beginConfiguration()
+            // .inputPriority keeps the format chosen below; with a preset, adding the input resets it (to 30 fps).
+            session.sessionPreset = .inputPriority
+            let input = try AVCaptureDeviceInput(device: device)
+            if session.canAddInput(input) { session.addInput(input) }
+            let output = AVCaptureVideoDataOutput()
+            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]
+            output.alwaysDiscardsLateVideoFrames = true
+            output.setSampleBufferDelegate(self, queue: queue)
+            if session.canAddOutput(output) { session.addOutput(output) }
+
             try device.lockForConfiguration()
             // Prefer a 1080p format that can run at 60 fps: each sender frame then gets two chances to be read.
             let formats = device.formats.filter {
@@ -71,15 +85,6 @@ final class CameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
             }
             if device.isFocusModeSupported(.continuousAutoFocus) { device.focusMode = .continuousAutoFocus }
             device.unlockForConfiguration()
-
-            session.beginConfiguration()
-            let input = try AVCaptureDeviceInput(device: device)
-            if session.canAddInput(input) { session.addInput(input) }
-            let output = AVCaptureVideoDataOutput()
-            output.videoSettings = [kCVPixelBufferPixelFormatTypeKey as String: kCVPixelFormatType_420YpCbCr8BiPlanarFullRange]
-            output.alwaysDiscardsLateVideoFrames = true
-            output.setSampleBufferDelegate(self, queue: queue)
-            if session.canAddOutput(output) { session.addOutput(output) }
             session.commitConfiguration()
         } catch {
             return "Camera failed: \(error.localizedDescription)"
@@ -108,14 +113,8 @@ final class CameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
 
     private func decode(_ luma: CVPixelBuffer, _ w: Worker) {
         let t0 = CFAbsoluteTimeGetCurrent()
-        try? VNImageRequestHandler(cvPixelBuffer: luma, orientation: .up).perform([w.request])
-        let results = w.request.results ?? []
-        var codes: [[UInt8]] = []
-        for obs in results {
-            guard let qr = obs.barcodeDescriptor as? CIQRCodeDescriptor,
-                  let bytes = QRPayload.bytes(fromDataCodewords: qr.errorCorrectedPayload, version: qr.symbolVersion) else { continue }
-            codes.append(bytes)
-        }
+        let results = (try? w.reader.read(luma)) ?? []
+        let codes = results.map { [UInt8]($0.bytes) }
         let ms = (CFAbsoluteTimeGetCurrent() - t0) * 1000
         lock.lock()
         w.busy = false
@@ -124,20 +123,21 @@ final class CameraScanner: NSObject, AVCaptureVideoDataOutputSampleBufferDelegat
         if !codes.isEmpty { onCodes(codes) }
     }
 
-    /// Copies the Y plane into a reusable one-channel buffer so the camera's buffer goes back to its pool right away.
+    /// Copies the Y plane into a reusable 4:2:0 buffer (zxing reads only plane 0, without conversion) so the camera's
+    /// buffer goes back to its pool right away.
     private func copyLuma(_ src: CVPixelBuffer, into cache: inout CVPixelBuffer?) -> CVPixelBuffer? {
         let w = CVPixelBufferGetWidthOfPlane(src, 0), h = CVPixelBufferGetHeightOfPlane(src, 0)
         if cache.map({ CVPixelBufferGetWidth($0) != w || CVPixelBufferGetHeight($0) != h }) ?? true {
             var out: CVPixelBuffer?
-            CVPixelBufferCreate(nil, w, h, kCVPixelFormatType_OneComponent8,
+            CVPixelBufferCreate(nil, w, h, kCVPixelFormatType_420YpCbCr8BiPlanarFullRange,
                                 [kCVPixelBufferIOSurfacePropertiesKey as String: [:]] as CFDictionary, &out)
             cache = out
         }
         guard let dst = cache else { return nil }
         CVPixelBufferLockBaseAddress(src, .readOnly); CVPixelBufferLockBaseAddress(dst, [])
         defer { CVPixelBufferUnlockBaseAddress(dst, []); CVPixelBufferUnlockBaseAddress(src, .readOnly) }
-        guard let s = CVPixelBufferGetBaseAddressOfPlane(src, 0), let d = CVPixelBufferGetBaseAddress(dst) else { return nil }
-        let sStride = CVPixelBufferGetBytesPerRowOfPlane(src, 0), dStride = CVPixelBufferGetBytesPerRow(dst)
+        guard let s = CVPixelBufferGetBaseAddressOfPlane(src, 0), let d = CVPixelBufferGetBaseAddressOfPlane(dst, 0) else { return nil }
+        let sStride = CVPixelBufferGetBytesPerRowOfPlane(src, 0), dStride = CVPixelBufferGetBytesPerRowOfPlane(dst, 0)
         if sStride == dStride {
             memcpy(d, s, sStride * h)
         } else {

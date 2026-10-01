@@ -7,6 +7,8 @@ options:
 packages:
   QBeamKit:
     path: ../QBeamKit
+  ZXingCpp:
+    path: ../ZXingCpp   # vendored zxing-cpp v3.1.1 built with NDEBUG (see its Package.swift)
 targets:
   QBeam:
     type: application
@@ -21,6 +23,7 @@ targets:
         LSSupportsOpeningDocumentsInPlace: true
     dependencies:
       - package: QBeamKit
+      - package: ZXingCpp
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: dev.qbeam.app

@@ -166,7 +166,7 @@ Claude
 - [ ] B.8 Android release signing: upload key kept outside the repo (+ CI secret), Play App Signing, `bundleRelease` AAB in CI
 - [ ] B.9 iOS archive + upload (Release, automatic signing) and a CI build of the archive
 - [x] B.10 (done 2026-10-02: iOS AppIcon 1024, Play icon 512 + feature graphic 1024x500, from scripts/store_icons.py; versions sync is part of B.8/B.9) App icons and launch assets at store sizes; version/build numbers synced with scripts/version.py
-- [ ] B.11 Trial + unlock behind a build switch (P3.7/P3.8, P4.2), with beta testers grandfathered to a free unlock
+- [x] B.11 (done 2026-10-02: Trial in android/core + QBeamKit with tests; Play Billing 9.1.0 and StoreKit 2; switch -Pqbeam.trial / QBEAM_TRIAL, off by default; paywall + counter checked on OnePlus and Simulator; real purchases untested until the store products exist) Trial + unlock behind a build switch (P3.7/P3.8, P4.2), with beta testers grandfathered to a free unlock
 - [ ] B.12 Upload: Play closed track + TestFlight external beta (needs Beta App Review)
 
 ---
@@ -180,8 +180,8 @@ Development
 - [ ] P3.4 Archive extraction in-app (tar, gz, xz) with zip-slip protection and size caps
 - [ ] P3.5 Phone → laptop: app displays the QR stream from a picked file; laptop runs `qbeam receive`
 - [x] P3.6 (done 2026-10-01) Passphrase decryption (per P0.6)
-- [ ] P3.7 **Trial:** count only completed, checksum-verified transfers; counter visible from #5; transfer in progress at the limit always finishes; unlock screen links to the free web decoder
-- [ ] P3.8 Google Play Billing one-time product ($6.99) + restore purchases; offline-tolerant entitlement cache
+- [x] P3.7 (done 2026-10-02, behind the switch) **Trial:** count only completed, checksum-verified transfers; counter visible from #5; transfer in progress at the limit always finishes; unlock screen links to the free web decoder
+- [ ] P3.8 (code done 2026-10-02: billing 9.1.0, product dev.qbeam.unlock, restore, cached entitlement; INTERNET stripped from the merged manifest, CI-checked; needs the Play product + license testers) Google Play Billing one-time product ($6.99) + restore purchases; offline-tolerant entitlement cache
 - [ ] P3.9 Accept `$19` bundle license keys (Ed25519-signed, verified offline) — can slip to P4
 - [ ] P3.10 Store listing: "offline file transfer" wording, screenshots, the hero clip, privacy policy (no data collected)
 
@@ -207,7 +207,7 @@ Marketing
 
 Development
 - [x] P4.1 (done 2026-10-01: Vision was ~45 KB/s, replaced by vendored zxing-cpp at 60 fps, 277 KB/s on iPhone 15) Swift + AVFoundation; ~~Vision~~ zxing-cpp; Swift codec port on shared vectors
-- [ ] P4.2 Same trial model with StoreKit 2 one-time purchase; Files app save; archive extraction
+- [ ] P4.2 (trial + StoreKit 2 code done 2026-10-02; needs the App Store product + sandbox testing) Same trial model with StoreKit 2 one-time purchase; Files app save; archive extraction
 - [ ] P4.3 $19 bundle: sell via Lemon Squeezy / Paddle; issue Ed25519-signed keys; all apps verify offline
 - [ ] P4.4 Pro web receiver: fast WASM decoder PWA unlocked by bundle key (reaches iPhone users before the iOS app)
 
@@ -277,6 +277,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-02 · B.10 icons (iOS AppIcon, Play icon + feature graphic). B.11 trial: 10 free transfers then a one-time unlock, shared Trial in Kotlin + Swift (tests), Play Billing + StoreKit 2, build switch off by default, beta installs grandfathered, paywall links to the web receiver. Play Billing pulls Google's datatransport logging (INTERNET); user chose to strip the permission — billing still binds to the Play Store, no crash on OnePlus; CI fails if INTERNET returns · Next: user creates Play + Apple accounts and the dev.qbeam.unlock product; Claude: B.8/B.9 signing + CI bundles
 - 2026-10-02 · Store copy + screenshots (B.7): Play and App Store text in store/ (fastlane layout, CI length check), 3 captioned screenshots per store from real iPhone 15 / OnePlus 12 transfers. Fixed two app bugs found while capturing: Saved-line speed included passphrase typing (now ends at the last needed code; tests in Kotlin + Swift), and iOS copy names split .tar.gz (now "name 2.tar.gz") · Next: B.10 icons at store sizes, B.8/B.9 signing + CI bundles, B.11 trial behind a switch; user: Play + Apple accounts
 - 2026-10-02 · Released 0.2.0 (PyPI, npm, GitHub with .pyz). Terminal mode tested to phone. Chose Option A: free betas on Play closed test + TestFlight now, trial/unlock built behind a switch and shipped after Gate 2 (rule and Gate 2 wording updated; Beta release track B.1–B.12 added). Privacy page at qbeam.dev/privacy · Next: user creates Play + Apple accounts (B.1/B.2); Claude: store copy, signing, CI bundles (B.7–B.10)
 - 2026-10-01 · Android on a OnePlus 12: ~140 KB/s at first (CameraX picked 1920×1440, one decode thread); with 16:9 1080p and a 4-worker zxing pool it reached 288 KB/s for 7.6 MB in 8 s, even though the camera only offers apps 30 fps. Both apps now show time and KB/s on the Saved line. iPhone 15: 277 KB/s · Next: trial counter + billing (P3.7/P3.8, P4.2), phone → laptop sending; competitor baseline (P0.12) to confirm parity

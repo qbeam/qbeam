@@ -17,8 +17,9 @@ the App Store) so uploads can be automated later.
 
 Copy rules: describe moving files between your own devices, offline. Never frame qbeam as a way around security or
 monitoring (CLAUDE.md). Speeds quoted are measured ones (iPhone 15 and OnePlus 12, `--speed max`, a file that doesn't
-compress); don't claim "fastest" until the competitor baseline (PLAN.md P0.12 / P3.16) is measured. When billing ships,
-both descriptions must mention the free transfers and the one-time unlock.
+compress); don't claim "fastest" until the competitor baseline (PLAN.md P0.12 / P3.16) is measured. When billing ships
+(trial switch on), both descriptions must mention the 10 free transfers and the one-time unlock, and Play's data-safety
+form should be answered for Play Billing (purchase history is handled by Google, not by us).
 
 Capturing new raw screenshots: phones on USB, then `adb exec-out screencap -p > x.png` (Android) and
 `xcrun devicectl device capture screenshot --device <udid> --destination x.png` (iPhone). Use demo files, never real

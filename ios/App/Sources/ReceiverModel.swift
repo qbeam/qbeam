@@ -11,6 +11,34 @@ final class ReceiverModel: ObservableObject {
     @Published var needsPassphrase = false
     @Published var saved: URL?
     @Published var stats = ""
+    @Published var counter: String?          // "5 of 10 free transfers used"
+    @Published var paywall = false           // free transfers used up and not unlocked
+    @Published var price: String?
+
+    /// The trial switch (PLAN.md B.11): Info.plist QBeamTrial, from the QBEAM_TRIAL build setting (NO for betas).
+    nonisolated static let trialEnabled = (Bundle.main.object(forInfoDictionaryKey: "QBeamTrial") as? String) == "YES"
+    private nonisolated let trial = Trial(store: UserDefaults.standard, enabled: ReceiverModel.trialEnabled)
+    private var purchases: Purchases?
+
+    init() {
+        publishTrial()
+        guard trial.enabled else { return }
+        let p = Purchases { [weak self] owned in
+            guard let self else { return }
+            self.trial.setPurchased(owned)
+            self.publishTrial()
+        }
+        purchases = p
+        Task { await p.start(); self.price = p.price }
+    }
+
+    private nonisolated func publishTrial() {
+        let counter = trial.counterText(), paywall = !trial.canStart(sessionInProgress: false)
+        Task { @MainActor in self.counter = counter; self.paywall = paywall }
+    }
+
+    func buy() { Task { if let m = await purchases?.buy() { notice = m } } }
+    func restore() { Task { await purchases?.restore() } }
 
     private nonisolated let work = DispatchQueue(label: "qbeam.receiver")
     private nonisolated(unsafe) let receiver = Receiver()
@@ -24,6 +52,9 @@ final class ReceiverModel: ObservableObject {
 
     nonisolated func onCodes(_ codes: [[UInt8]]) {
         work.async { [self] in
+            // Free transfers used up: don't start a new one (a transfer already under way always finishes).
+            let current = receiver.session
+            guard trial.canStart(sessionInProgress: current.map { !$0.finished && $0.progress > 0 } ?? false) else { return }
             var complete: Receiver.Session?
             var notice: String?
             for c in codes {
@@ -71,6 +102,8 @@ final class ReceiverModel: ObservableObject {
         do {
             let file = try receiver.finish(s, passphrase: passphrase)
             let url = try Self.store(file)
+            trial.onSaved()
+            publishTrial()
             pending = nil
             // From the first code to the last needed one (not passphrase typing), counting the bytes on screen.
             let sec = (s.completedAt ?? Date().timeIntervalSince1970) - s.started

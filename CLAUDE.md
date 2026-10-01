@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P2 hardening done; P3 (Android) and P4 (iOS) receiver apps started
-- **Last done:** both apps tested on real phones (iPhone 15 277 KB/s, OnePlus 12 288 KB/s, terminal mode works); CLI 0.2.0 released (2026-10-02)
-- **Next up:** beta release track in PLAN.md (Option A: free betas on Play closed test + TestFlight now, trial/unlock built behind a switch, shipped after Gate 2). User: Play + Apple accounts, testers. Claude: privacy page, store copy, signing, uploads. P0.12 competitor baseline still open (CameraFileCopy is on the user's OnePlus)
+- **Last done:** store copy + screenshots, icons, and the trial/unlock behind a switch (Play Billing + StoreKit 2; Android INTERNET stripped, CI-checked) (2026-10-02)
+- **Next up:** B.8/B.9 release signing + CI bundles, then uploads (B.12) once the user has Play + Apple accounts and has created product `dev.qbeam.unlock` in both stores. Trial switch: Android `-Pqbeam.trial=true`, iOS `QBEAM_TRIAL=YES`; leave off for betas. P0.12 competitor baseline still open
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
@@ -65,7 +65,7 @@ fast 3x2 v25 @15, max 3x2 v30 @30 (T = capacity − 22).
 
 - Python package must stay **stdlib-only** at runtime (vendored pure-Python code OK; optional extras OK).
 - Installs must work **without admin rights** on macOS, Linux and Windows.
-- The CLI makes **no network calls** (no telemetry, no update checks).
+- The CLI makes **no network calls** (no telemetry, no update checks). The Android app has no INTERNET permission (stripped from Play Billing's dependencies; CI checks the merged manifest) and the iOS app makes no network calls of its own.
 - The channel is **one-way**; nothing can depend on receiver feedback.
 - Browser JS: ES5-style IIFEs, no build tooling, everything inlined into single offline HTML files.
 - All codecs (Python, JS, Kotlin, Swift, Go) must pass the shared test vectors in `protocol/test-vectors/` once they exist.

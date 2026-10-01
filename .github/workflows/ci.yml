@@ -80,8 +80,10 @@ jobs:
         run: |
           brew install xcodegen
           xcodegen
-          xcodebuild -project QBeam.xcodeproj -scheme QBeam -destination 'generic/platform=iOS Simulator' \
-            -derivedDataPath build CODE_SIGNING_ALLOWED=NO build
+          for trial in NO YES; do   # beta, and the store build with the trial switch on
+            xcodebuild -project QBeam.xcodeproj -scheme QBeam -destination 'generic/platform=iOS Simulator' \
+              -derivedDataPath build CODE_SIGNING_ALLOWED=NO QBEAM_TRIAL=$trial build
+          done
 
   kotlin:
     # qbeam-core, the Android app's protocol codec, against the shared vectors.
@@ -99,9 +101,19 @@ jobs:
       - name: Android SDK platform 36
         # `|| true`: yes dies of SIGPIPE when sdkmanager exits first, which fails the step under pipefail.
         run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
-      - name: Build the app (debug APK)
+      - name: Build the app (debug APK; beta and store/trial switch)
         working-directory: android
-        run: ./gradlew :app:assembleDebug --console=plain
+        run: |
+          ./gradlew :app:assembleDebug --console=plain
+          ./gradlew :app:assembleDebug -Pqbeam.trial=true --console=plain
+      - name: The app never gains network access (privacy page, store listings)
+        working-directory: android
+        run: |
+          m=app/build/intermediates/merged_manifest/debug/processDebugMainManifest/AndroidManifest.xml
+          grep -E 'uses-permission' "$m"
+          if grep -qE 'android.permission.(INTERNET|ACCESS_NETWORK_STATE)' "$m"; then
+            echo "::error::The merged manifest requests network access. A dependency added it; remove it in AndroidManifest.xml (tools:node=\"remove\") or rethink the dependency."; exit 1
+          fi
 
   optics:
     # Real sender frames through a simulated phone camera, decoded by the receiver's zxing build. Fails when a

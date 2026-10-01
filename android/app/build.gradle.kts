@@ -14,6 +14,8 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+        // The trial switch (PLAN.md B.11): off for beta builds; a store release builds with -Pqbeam.trial=true.
+        buildConfigField("boolean", "TRIAL", (findProperty("qbeam.trial") ?: "false").toString())
     }
 
     buildTypes {
@@ -29,7 +31,7 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    buildFeatures { compose = true }
+    buildFeatures { compose = true; buildConfig = true }
 }
 
 kotlin { jvmToolchain(17) }
@@ -47,4 +49,5 @@ dependencies {
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.activity:activity-compose:1.11.0")
+    implementation("com.android.billingclient:billing:9.1.0") // adds only com.android.vending.BILLING, no internet
 }

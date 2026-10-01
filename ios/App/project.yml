@@ -21,6 +21,7 @@ targets:
       properties:
         UIFileSharingEnabled: true
         LSSupportsOpeningDocumentsInPlace: true
+        QBeamTrial: $(QBEAM_TRIAL)   # the trial switch, read by ReceiverModel
     dependencies:
       - package: QBeamKit
       - package: ZXingCpp
@@ -33,6 +34,7 @@ targets:
         SWIFT_VERSION: "5.0"
         TARGETED_DEVICE_FAMILY: "1,2"
         GENERATE_INFOPLIST_FILE: YES
+        QBEAM_TRIAL: "NO"   # beta builds; a store release builds with QBEAM_TRIAL=YES (PLAN.md B.11)
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon   # Sources/Assets.xcassets, from scripts/store_icons.py
         INFOPLIST_KEY_CFBundleDisplayName: qbeam
         INFOPLIST_KEY_NSCameraUsageDescription: "qbeam reads the codes on the sending screen with the camera. Nothing leaves this device."

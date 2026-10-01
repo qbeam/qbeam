@@ -1,5 +1,6 @@
 // qbeam receiver for iOS: camera preview, live progress, passphrase prompt, save to Files.
 import AVFoundation
+import QBeamKit
 import SwiftUI
 
 @main
@@ -23,7 +24,11 @@ struct ContentView: View {
                     if let cameraError { Text(cameraError).foregroundStyle(.secondary).padding() }
                 }
                 .aspectRatio(3 / 4, contentMode: .fit)
-                Text(model.status)
+                if model.paywall && model.saved == nil && !model.needsPassphrase {
+                    Paywall(price: model.price, unlock: model.buy, restore: model.restore)
+                } else {
+                    Text(model.status)
+                }
                 if let p = model.progress { ProgressView(value: p) }
                 if let hint = model.hint { Banner(text: hint, bg: Color(red: 0.24, green: 0.2, blue: 0.06), fg: Color(red: 1, green: 0.88, blue: 0.54)) }
                 if let notice = model.notice { Banner(text: notice, bg: Color(red: 0.29, green: 0.08, blue: 0.08), fg: Color(red: 1, green: 0.7, blue: 0.7)) }
@@ -37,6 +42,7 @@ struct ContentView: View {
                         Button("Next file") { passphrase = ""; model.reset() }.buttonStyle(.bordered)
                     }
                 }
+                if let counter = model.counter, !model.paywall { Text(counter).font(.footnote).foregroundStyle(.secondary) }
                 Text(model.stats).font(.caption2).foregroundStyle(.secondary)
             }
             .padding()
@@ -52,6 +58,22 @@ struct ContentView: View {
         }
         let s = CameraScanner(onCodes: model.onCodes, onStats: model.onStats)
         if let err = s.start() { cameraError = err } else { scanner = s }
+    }
+}
+
+struct Paywall: View {
+    let price: String?, unlock: () -> Void, restore: () -> Void
+    var body: some View {
+        VStack(alignment: .leading, spacing: 10) {
+            Text("You've used your \(Trial.freeTransfers) free transfers.").font(.headline)
+            Text("Unlock unlimited transfers with a one-time purchase. No subscription, and the app stays offline.")
+                .font(.subheadline).foregroundStyle(.secondary)
+            HStack {
+                Button(price.map { "Unlock for \($0)" } ?? "Unlock", action: unlock).buttonStyle(.borderedProminent)
+                Button("Restore purchase", action: restore).buttonStyle(.bordered)
+            }
+            Text("Or keep using the free web receiver: open qbeam.dev/r in Safari.").font(.footnote).foregroundStyle(.secondary)
+        }
     }
 }
 

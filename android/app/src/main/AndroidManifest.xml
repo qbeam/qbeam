@@ -1,7 +1,13 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
     <uses-feature android:name="android.hardware.camera.any" android:required="true" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- No network access, ever (privacy page, store listings). Play Billing pulls in Google's datatransport logging
+         library, which asks for these; billing itself talks to the Play Store app over IPC and doesn't need them.
+         CI fails if the merged release manifest gains INTERNET. -->
+    <uses-permission android:name="android.permission.INTERNET" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
 
     <application
         android:label="@string/app_name"

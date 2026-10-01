@@ -55,6 +55,7 @@ import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.content.ContextCompat
 import dev.qbeam.core.QBeamException
 import dev.qbeam.core.Receiver
+import dev.qbeam.core.Trial
 import java.util.concurrent.Executors
 
 class MainActivity : ComponentActivity() {
@@ -73,6 +74,18 @@ class UiState {
     var needsPassphrase by mutableStateOf(false)
     var saved by mutableStateOf<Pair<String, Uri>?>(null)
     var stats by mutableStateOf("")
+    var counter by mutableStateOf<String?>(null)   // "5 of 10 free transfers used"
+    var paywall by mutableStateOf(false)           // free transfers used up and not unlocked
+    var price by mutableStateOf<String?>(null)
+}
+
+/** Trial counters in SharedPreferences (survive app updates, so beta testers keep their free unlock). */
+class PrefsStore(context: Context) : Trial.Store {
+    private val prefs = context.getSharedPreferences("trial", Context.MODE_PRIVATE)
+    override fun getInt(key: String) = prefs.getInt(key, 0)
+    override fun putInt(key: String, value: Int) = prefs.edit().putInt(key, value).apply()
+    override fun getBoolean(key: String) = prefs.getBoolean(key, false)
+    override fun putBoolean(key: String, value: Boolean) = prefs.edit().putBoolean(key, value).apply()
 }
 
 /** Owns the Receiver on a single background thread and publishes UiState updates to the main thread. */
@@ -83,6 +96,23 @@ class Controller(private val context: Context, private val ui: UiState) {
     private val startedAt = HashMap<Long, Long>()   // session id -> first code seen (for speed and time left)
     private var pending: Receiver.Session? = null  // complete but waiting for a passphrase
     private var lastUi = 0L
+    private val trial = Trial(PrefsStore(context), enabled = BuildConfig.TRIAL)
+    private val billing = if (trial.enabled) Billing(context,
+        onOwned = { owned -> trial.setPurchased(owned); publishTrial() },
+        onPrice = { p -> main.post { ui.price = p } },
+        onError = { m -> main.post { ui.notice = m } },
+    ).also { it.connect() } else null
+
+    init { publishTrial() }
+
+    private fun publishTrial() {
+        val counter = trial.counterText()
+        val paywall = !trial.canStart(sessionInProgress = false)
+        main.post { ui.counter = counter; ui.paywall = paywall }
+    }
+
+    fun buy(activity: android.app.Activity) = billing?.buy(activity)
+    fun restore() = billing?.refresh()
 
     fun onStats(s: Scanner.Stats) {
         val text = s.summary
@@ -90,6 +120,9 @@ class Controller(private val context: Context, private val ui: UiState) {
     }
 
     fun onCodes(codes: List<ByteArray>) = worker.execute {
+        val current = receiver.session
+        // Free transfers used up: don't start a new one (a transfer already under way always finishes).
+        if (!trial.canStart(sessionInProgress = current != null && !current.finished && current.progress > 0)) return@execute
         var complete: Receiver.Session? = null
         var notice: String? = null
         for (c in codes) {
@@ -137,6 +170,8 @@ class Controller(private val context: Context, private val ui: UiState) {
             val uri = Saver.save(context, saved.filename, saved.bytes)
             pending = null
             val took = took(s)
+            trial.onSaved()
+            publishTrial()
             main.post {
                 ui.needsPassphrase = false; ui.hint = null; ui.progress = 1f
                 ui.saved = saved.filename to uri
@@ -166,7 +201,10 @@ class Controller(private val context: Context, private val ui: UiState) {
         return " · ${size(rate.toLong())}/s · about ${(s.L * (1 - s.progress) / rate).toInt()} s left"
     }
 
-    fun shutdown() = worker.shutdown()
+    fun shutdown() {
+        worker.shutdown()
+        billing?.close()
+    }
 }
 
 fun size(b: Long) = if (b >= 1 shl 20) "%.1f MB".format(b / 1048576.0) else "${maxOf(1, b / 1024)} KB"
@@ -199,7 +237,11 @@ fun ReceiverScreen() {
         Box(Modifier.fillMaxWidth().aspectRatio(3f / 4f).clip(RoundedCornerShape(12.dp)).background(Color.Black)) {
             AndroidView(factory = { ctx -> PreviewView(ctx).also { scanner.bind(owner, it) } }, modifier = Modifier.fillMaxSize())
         }
-        Text(ui.status, color = Color.White, fontSize = 15.sp)
+        if (ui.paywall && ui.saved == null && !ui.needsPassphrase) {
+            Paywall(ui.price, onUnlock = { (context as? android.app.Activity)?.let(controller::buy) }, onRestore = controller::restore)
+        } else {
+            Text(ui.status, color = Color.White, fontSize = 15.sp)
+        }
         ui.progress?.let { p -> LinearProgressIndicator(progress = { p }, modifier = Modifier.fillMaxWidth()) }
         ui.hint?.let { Banner(it, Color(0xFF3D3210), Color(0xFFFFE08A)) }
         ui.notice?.let { Banner(it, Color(0xFF4A1414), Color(0xFFFFB3B3)) }
@@ -226,7 +268,22 @@ fun ReceiverScreen() {
                 OutlinedButton(onClick = { passphrase = ""; controller.reset() }) { Text("Next file") }
             }
         }
+        ui.counter?.takeIf { !ui.paywall }?.let { Text(it, color = Color(0xFFBBBBBB), fontSize = 13.sp) }
         Text(ui.stats, color = Color(0xFF777777), fontSize = 11.sp)
+    }
+}
+
+@Composable
+fun Paywall(price: String?, onUnlock: () -> Unit, onRestore: () -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        Text("You've used your ${Trial.FREE_TRANSFERS} free transfers.", color = Color.White, fontSize = 17.sp)
+        Text("Unlock unlimited transfers with a one-time purchase. No subscription, and the app stays offline.",
+            color = Color(0xFFBBBBBB), fontSize = 14.sp)
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            Button(onClick = onUnlock) { Text(if (price != null) "Unlock for $price" else "Unlock") }
+            OutlinedButton(onClick = onRestore) { Text("Restore purchase") }
+        }
+        Text("Or keep using the free web receiver: open qbeam.dev/r in Chrome.", color = Color(0xFF999999), fontSize = 13.sp)
     }
 }
 

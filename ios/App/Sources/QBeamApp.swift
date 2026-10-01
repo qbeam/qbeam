@@ -50,7 +50,7 @@ struct ContentView: View {
             cameraError = "Camera access is off. Turn it on in Settings › qbeam to receive files."
             return
         }
-        let s = CameraScanner(onCodes: model.onCodes)
+        let s = CameraScanner(onCodes: model.onCodes, onStats: model.onStats)
         if let err = s.start() { cameraError = err } else { scanner = s }
     }
 }

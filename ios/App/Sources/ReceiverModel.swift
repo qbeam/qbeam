@@ -17,7 +17,12 @@ final class ReceiverModel: ObservableObject {
     private nonisolated(unsafe) var pending: Receiver.Session?
     private nonisolated(unsafe) var lastUI = Date.distantPast
 
-    nonisolated func onCodes(_ codes: [[UInt8]], _ s: CameraScanner.Stats) {
+    nonisolated func onStats(_ s: CameraScanner.Stats) {
+        let text = s.summary
+        Task { @MainActor in self.stats = text }
+    }
+
+    nonisolated func onCodes(_ codes: [[UInt8]]) {
         work.async { [self] in
             var complete: Receiver.Session?
             var notice: String?
@@ -35,9 +40,7 @@ final class ReceiverModel: ObservableObject {
             let elapsed = session.map { now.timeIntervalSince1970 - $0.started } ?? 0
             let progress = session?.progress ?? 0, L = session?.L ?? 0, encrypted = session?.encrypted ?? false
             let active = session.map { !$0.finished } ?? false
-            let stats = "\(s.width)×\(s.height) · \(s.fps) fps · \(s.decodeMs) ms decode"
             Task { @MainActor in
-                self.stats = stats
                 if let notice, progress == 0 { self.notice = notice }
                 guard active, self.saved == nil, !self.needsPassphrase else { return }
                 self.progress = progress

@@ -1,0 +1,4 @@
+# Keep LF everywhere so generated pages and vectors are byte-identical on every OS.
+* text=auto eol=lf
+*.wasm binary
+*.png binary

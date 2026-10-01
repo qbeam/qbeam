@@ -20,7 +20,7 @@ var failures = 0;
 var PASS = "correct horse battery staple";
 var T_FOR_SPEED = { safe: 1251, fast: 1251, max: 1710 }; // must match web/sender_app.js presets
 
-function pageGlobal(html, name) { return JSON.parse(html.match(new RegExp("var " + name + " = (.*?);\\n"))[1]); }
+function pageGlobal(html, name) { return JSON.parse(html.match(new RegExp("var " + name + " = (.*?);\\r?\\n"))[1]); }
 
 async function decodePage(page, loss) {
   var html = fs.readFileSync(page, "utf8");

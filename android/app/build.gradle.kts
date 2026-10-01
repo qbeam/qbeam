@@ -20,6 +20,9 @@ android {
         release {
             isMinifyEnabled = true
             proguardFiles(getDefaultProguardFile("proguard-android-optimize.txt"), "proguard-rules.pro")
+            // Debug key so optimised builds can be installed for speed tests (debuggable builds run slower).
+            // Replace with the Play upload key when store releases start (P3.8).
+            signingConfig = signingConfigs.getByName("debug")
         }
     }
     compileOptions {

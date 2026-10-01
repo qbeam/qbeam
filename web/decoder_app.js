@@ -281,4 +281,10 @@
   }, 500);
 
   setStatus("Press Start camera, then point it at the sender.");
+
+  // Hosted at qbeam.dev/r: the service worker keeps this page cached so it opens with no network. Skipped for the
+  // file:// copy, which is already offline.
+  if ("serviceWorker" in navigator && location.protocol === "https:") {
+    navigator.serviceWorker.register("sw.js").catch(function () { /* still works without it while online */ });
+  }
 })();

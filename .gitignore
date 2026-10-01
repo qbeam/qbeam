@@ -46,3 +46,6 @@ bench/spike/.cert/
 
 # End-to-end test sender pages
 web/test/tmp/
+
+# Built site (scripts/build_site.py)
+_site/

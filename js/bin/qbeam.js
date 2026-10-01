@@ -18,6 +18,7 @@ var QBeam3 = require(path.join(pkgDir, "qbeam3.js"));
 // Raw bytes the sender offers per second for each preset; must match web/sender_app.js and the Python CLI.
 var SPEEDS = { safe: 4 * 1251 * 10, fast: 6 * 1251 * 15, max: 6 * 1710 * 30 };
 var TYPICAL_EFFICIENCY = 0.75;
+var RECEIVER_URL = "https://qbeam.dev/r";
 
 // In a checkout the repo's own files win, so a stale assets/ copy from an earlier `npm pack` is never used.
 function asset(name) {
@@ -135,16 +136,17 @@ async function send(opts) {
   }
   console.log("");
   if (opts.noOpen || !openPath(path.resolve(outPath))) {
-    console.log("Open " + outPath + " in a browser, then point the phone's qbeam receiver at it.");
+    console.log("Open " + outPath + " in a browser, then point the phone's qbeam receiver (" + RECEIVER_URL + ") at it.");
   } else {
-    console.log("Opened the sender page. Point the phone's qbeam receiver at it; press Fullscreen for best results.");
+    console.log("Opened the sender page. On the phone, open " + RECEIVER_URL + " and point it at the codes; press Fullscreen for best results.");
   }
 }
 
 function receive(noOpen) {
   var p = asset("decoder.html");
   console.log("Receiver page: " + p);
-  console.log("Copy it to your phone once (it works offline) and open it there, or use this computer's webcam.");
+  console.log("On your phone: open " + RECEIVER_URL + " (keeps working offline after the first visit),");
+  console.log("or copy this file to the phone and open it there. It also works with this computer's webcam.");
   if (!noOpen) openPath(p);
 }
 

@@ -52,6 +52,8 @@ REPO_ASSETS = {
 SPEEDS = {"safe": 4 * 1251 * 10, "fast": 6 * 1251 * 15, "max": 6 * 1710 * 30}
 TYPICAL_EFFICIENCY = 0.75  # share of offered codes a phone camera reads (bench/RESULTS.md)
 
+RECEIVER_URL = "https://qbeam.dev/r"
+
 # Never worth sending: OS metadata, regenerable caches and test artifacts.
 JUNK_PATTERNS = [
     ".git", ".DS_Store", "__pycache__", "*.pyc", ".pytest_cache", ".mypy_cache",
@@ -215,7 +217,8 @@ def receive(no_open: bool) -> None:
         path = pathlib.Path.cwd() / "qbeam-receiver.html"
         path.write_text(read_asset("decoder.html"), encoding="utf-8")
     print(f"Receiver page: {path}")
-    print("Copy it to your phone once (it works offline) and open it there, or use this computer's webcam.")
+    print(f"On your phone: open {RECEIVER_URL} (keeps working offline after the first visit),")
+    print("or copy this file to the phone and open it there. It also works with this computer's webcam.")
     if not no_open:
         webbrowser.open(path.as_uri())
 
@@ -307,14 +310,15 @@ def send(args) -> None:
     if terminal_mode:
         if passphrase is not None:
             wait_before_codes()
+        print(f"Receiver:    {RECEIVER_URL} on your phone")
         terminal.run(prep["payload"], prep["flags"], prep["session"], args.speed, prep["saved_name"])
         print("Stopped. If the phone didn't save the file yet, run the same command again.")
         return
     print()
     if args.no_open or not webbrowser.open(out_path.resolve().as_uri()):
-        print(f"Open {out_path} in a browser, then point the phone's qbeam receiver at it.")
+        print(f"Open {out_path} in a browser, then point the phone's qbeam receiver ({RECEIVER_URL}) at it.")
     else:
-        print("Opened the sender page. Point the phone's qbeam receiver at it; press Fullscreen for best results.")
+        print(f"Opened the sender page. On the phone, open {RECEIVER_URL} and point it at the codes; press Fullscreen for best results.")
 
 
 if __name__ == "__main__":

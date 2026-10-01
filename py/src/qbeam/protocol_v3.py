@@ -12,6 +12,10 @@ VERSION = 3
 HEADER = 18
 OVERHEAD = HEADER + 4
 KMAX = 2048
+# Session limits (SPEC v3 §2): receivers reject anything outside them, so senders never produce it.
+T_MIN, T_MAX = 8, 2931           # 2931 = QR version 40-L capacity (2953) - 22 bytes of framing
+MAX_L = 256 * 1024 * 1024
+MAX_K = 1 << 20
 ENCODINGS = {"raw": 0, "gzip": 1}
 FLAG_ENCRYPTED = 0x01  # SPEC v3 §2, bit 0; payload is an encryption envelope (§7)
 
@@ -101,8 +105,22 @@ class Encoder:
         return acc.to_bytes(self.T, "big")
 
 
+def limits_error(L: int, T: int):
+    """Why (L, T) is outside the v3 session limits, or None."""
+    if not T_MIN <= T <= T_MAX:
+        return f"symbol size {T} outside {T_MIN}-{T_MAX}"
+    if L > MAX_L:
+        return f"payload of {L} bytes exceeds {MAX_L}"
+    if max(1, -(-L // T)) > MAX_K:
+        return f"more than {MAX_K} blocks"
+    return None
+
+
 def encode_code(session: int, L: int, T: int, esi: int, symbol: bytes, flags: int = 0) -> bytes:
     """SPEC v3 §2: one QR code's bytes."""
+    err = limits_error(L, T)
+    if err:
+        raise ValueError(err)
     if len(symbol) != T:
         raise ValueError("symbol must be T bytes")
     body = MAGIC + struct.pack(">BBIIHI", VERSION, flags, session, L, T, esi) + symbol

@@ -12,6 +12,17 @@ var QBeam3 = (function () {
   var MAGIC0 = 0xb3, MAGIC1 = 0x71, VERSION = 3;
   var HEADER = 18, TRAILER = 4, OVERHEAD = HEADER + TRAILER;
   var KMAX = 2048;
+  // Session limits (SPEC v3 §2). Receivers check them before allocating anything, so a single crafted code can't make
+  // them reserve gigabytes; senders never produce sessions outside them.
+  var T_MIN = 8, T_MAX = 2931;              // 2931 = QR version 40-L capacity (2953) - 22 bytes of framing
+  var MAX_L = 256 * 1024 * 1024, MAX_K = 1 << 20;
+
+  function limitsError(L, T) {
+    if (T < T_MIN || T > T_MAX) return "symbol size " + T + " outside " + T_MIN + "-" + T_MAX;
+    if (L > MAX_L) return "payload of " + L + " bytes exceeds " + MAX_L;
+    if (Math.max(1, Math.ceil(L / T)) > MAX_K) return "more than " + MAX_K + " blocks";
+    return null;
+  }
   var MUST_UNDERSTAND = 0x0f; // flag bits a receiver must reject if it doesn't know them
   var FLAG_ENCRYPTED = 0x01;
   var KNOWN_FLAGS = FLAG_ENCRYPTED;
@@ -117,6 +128,8 @@ var QBeam3 = (function () {
 
   // ---- Code framing ----
   function encodeCode(session, L, T, esi, symbol, flags) {
+    var err = limitsError(L, T);
+    if (err) throw new Error(err);
     var b = new Uint8Array(OVERHEAD + T), v = new DataView(b.buffer);
     b[0] = MAGIC0; b[1] = MAGIC1; b[2] = VERSION; b[3] = flags || 0;
     v.setUint32(4, session >>> 0); v.setUint32(8, L >>> 0); v.setUint16(12, T); v.setUint32(14, esi >>> 0);
@@ -135,6 +148,7 @@ var QBeam3 = (function () {
     if (T < 1 || b.length !== OVERHEAD + T) return { error: "length" };
     if (v.getUint32(HEADER + T) !== crc32(b, 0, HEADER + T)) return { error: "crc" };
     if (b[3] & MUST_UNDERSTAND & ~KNOWN_FLAGS) return { error: "flags", flags: b[3] };
+    if (limitsError(v.getUint32(8), T)) return { error: "limits" };
     return { session: v.getUint32(4), L: v.getUint32(8), T: T, esi: v.getUint32(14), flags: b[3],
              symbol: b.subarray(HEADER, HEADER + T) };
   }
@@ -188,10 +202,12 @@ var QBeam3 = (function () {
   };
 
   function Decoder(L, T) {
+    var err = limitsError(L, T);
+    if (err) throw new Error(err);
     this.lay = layout(L, T);
     this.T = T;
     this.seen = new Set();
-    this.segs = this.lay.segments.map(function (s) { return new SegmentDecoder(s.size, T); });
+    this.segs = new Array(this.lay.S); // segment decoders are created when their first symbol arrives
     this.rank = 0;
   }
 
@@ -199,8 +215,9 @@ var QBeam3 = (function () {
   Decoder.prototype.add = function (esi, bytes) {
     if (bytes.length !== this.T || this.seen.has(esi)) return false;
     this.seen.add(esi);
-    var cf = coefficients(this.lay, esi);
-    var ok = this.segs[cf.seg.index].add(cf.coef, bytes);
+    var cf = coefficients(this.lay, esi), s = cf.seg.index;
+    if (!this.segs[s]) this.segs[s] = new SegmentDecoder(cf.seg.size, this.T);
+    var ok = this.segs[s].add(cf.coef, bytes);
     if (ok) this.rank++;
     return ok;
   };
@@ -208,9 +225,9 @@ var QBeam3 = (function () {
   Decoder.prototype.complete = function () { return this.rank === this.lay.K; };
 
   Decoder.prototype.payload = function () {
-    var out = new Uint8Array(this.lay.L), T = this.T, lay = this.lay;
-    this.segs.forEach(function (sd, s) {
-      var start = lay.segments[s].start * T;
+    var out = new Uint8Array(this.lay.L), T = this.T, lay = this.lay, segs = this.segs;
+    lay.segments.forEach(function (seg, s) {
+      var sd = segs[s], start = seg.start * T;
       out.set(sd.data.subarray(0, Math.max(0, Math.min(sd.data.length, lay.L - start))), start);
     });
     return out;
@@ -296,6 +313,7 @@ var QBeam3 = (function () {
 
   return {
     VERSION: VERSION, HEADER: HEADER, OVERHEAD: OVERHEAD, KMAX: KMAX, FLAG_ENCRYPTED: FLAG_ENCRYPTED,
+    T_MIN: T_MIN, T_MAX: T_MAX, MAX_L: MAX_L, MAX_K: MAX_K, limitsError: limitsError,
     sealEnvelope: sealEnvelope, openEnvelope: openEnvelope,
     crc32: crc32, layout: layout, coefficients: coefficients,
     Encoder: Encoder, Decoder: Decoder,

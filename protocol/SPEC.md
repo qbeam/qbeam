@@ -56,6 +56,14 @@ encoding time); receivers MUST accept any level and mask.
 2. Length `≠ T + 22`: ignore.
 3. CRC mismatch: ignore.
 4. Any must-understand flag bit set that this receiver doesn't implement: ignore, and SHOULD tell the user.
+5. Outside the session limits: ignore, and SHOULD tell the user. This check MUST happen before allocating anything
+   for the session, so a single crafted code can't make a receiver reserve gigabytes. The limits are:
+   - `8 ≤ T ≤ 2931` (2,931 = the largest QR code, version 40-L, minus 22 bytes of framing);
+   - `L ≤ 268,435,456` (256 MiB);
+   - `K ≤ 1,048,576` blocks.
+
+   Senders MUST NOT produce sessions outside these limits; a sender drawing small codes (e.g. in a terminal) must
+   pick a T large enough to keep K within the limit.
 
 **Session identity** is the tuple (`session`, `L`, `T`, must-understand flag bits). A code from a different session
 replaces the current one only if the current one is idle: none, finished, no symbols accepted yet, or no new

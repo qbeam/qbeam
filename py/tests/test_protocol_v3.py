@@ -31,8 +31,9 @@ class ProtocolV3VectorTest(unittest.TestCase):
     def test_constants(self):
         c = V["constants"]
         self.assertEqual(list(p3.MAGIC), c["magic"])
-        self.assertEqual((p3.VERSION, p3.HEADER, p3.OVERHEAD, p3.KMAX),
-                         (c["version"], c["headerBytes"], c["overheadBytes"], c["kmax"]))
+        self.assertEqual((p3.VERSION, p3.HEADER, p3.OVERHEAD, p3.KMAX, p3.T_MIN, p3.T_MAX, p3.MAX_L, p3.MAX_K),
+                         (c["version"], c["headerBytes"], c["overheadBytes"], c["kmax"],
+                          c["tMin"], c["tMax"], c["maxL"], c["maxK"]))
 
     def test_crc32(self):
         for case in V["crc32"]:
@@ -81,6 +82,9 @@ class ProtocolV3VectorTest(unittest.TestCase):
                     self.assertNotEqual(len(b), T + p3.OVERHEAD)
                 elif case["reason"] == "crc":
                     self.assertNotEqual(p3.crc32(b[:-4]), struct.unpack(">I", b[-4:])[0])
+                elif case["reason"] == "limits":
+                    self.assertEqual(p3.crc32(b[:-4]), struct.unpack(">I", b[-4:])[0])
+                    self.assertIsNotNone(p3.limits_error(struct.unpack(">I", b[8:12])[0], T))
                 elif case["reason"] == "flags":
                     self.assertEqual(p3.crc32(b[:-4]), struct.unpack(">I", b[-4:])[0])
                     self.assertTrue(b[3] & 0x0F)

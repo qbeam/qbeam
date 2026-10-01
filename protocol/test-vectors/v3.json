@@ -8,7 +8,11 @@
   "version": 3,
   "headerBytes": 18,
   "overheadBytes": 22,
-  "kmax": 2048
+  "kmax": 2048,
+  "tMin": 8,
+  "tMax": 2931,
+  "maxL": 268435456,
+  "maxK": 1048576
  },
  "crc32": [
   {
@@ -324,6 +328,11 @@
   {
    "reason": "length",
    "codeHex": "b37103000a0b0c0d000002ee00c8000000000100000e68c3a96c6c6f20e5908d2e7478742c800c1b9ae2863671b7389376da8add9f5850cbf3f348f9b024ed5df895ac270726456483a2c1e0ff1e3d5c7b9ab9d8f71635547392b1d0ef0e2d4c6b8aa9c8e70625446382a1c0dffe1d3c5b7a99b8d7f61534537291b0cfee0d2c4b6a89a8c7e60524436281a0bfdefd1c3b5a7998b7d6f51433527190afceed0c2b4a6988a7c6e504234261809fbeddfc1b3a597897b6d5f4133251708faecdec0b2a496887a6c5e4032241607f9ebddcfb1a39587796b5d4f3125b1c6c"
+  },
+  {
+   "reason": "limits",
+   "note": "valid CRC but T = 1 and L = 2^32 - 1: must be rejected before allocating",
+   "codeHex": "b37103000a0b0c0dffffffff00010000000000d02fc0fd"
   }
  ],
  "encryption": {

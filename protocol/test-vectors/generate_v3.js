@@ -63,6 +63,10 @@ var reject = [
   { reason: "flags", note: "unknown must-understand bit 1 set, CRC recomputed", codeHex: (function () {
       var b = Q.encodeCode(session, container.length, T, 0, senc.symbol(0), 0x02); return hex(b); })() },
   { reason: "length", codeHex: hex(good.subarray(0, good.length - 1)) },
+  { reason: "limits", note: "valid CRC but T = 1 and L = 2^32 - 1: must be rejected before allocating", codeHex: (function () {
+      var b = new Uint8Array(23), v = new DataView(b.buffer);
+      b.set([0xb3, 0x71, 3, 0]); v.setUint32(4, session); v.setUint32(8, 0xffffffff); v.setUint16(12, 1); v.setUint32(14, 0);
+      v.setUint32(19, Q.crc32(b, 0, 19)); return hex(b); })() },
 ];
 
 // Encryption envelope of the session container (1,000 iterations for speed; senders use >= 600,000).
@@ -73,7 +77,8 @@ var passphrase = "correct horse battery staple";
 Q.sealEnvelope(container, passphrase, envelopeOpts).then(function (envelope) {
 var out = {
   description: "qbeam protocol v3 test vectors. payload byte i = (i*31 + 7) & 0xff. See protocol/SPEC.md.",
-  constants: { magic: [0xb3, 0x71], version: 3, headerBytes: Q.HEADER, overheadBytes: Q.OVERHEAD, kmax: Q.KMAX },
+  constants: { magic: [0xb3, 0x71], version: 3, headerBytes: Q.HEADER, overheadBytes: Q.OVERHEAD, kmax: Q.KMAX,
+               tMin: Q.T_MIN, tMax: Q.T_MAX, maxL: Q.MAX_L, maxK: Q.MAX_K },
   crc32: crc,
   layouts: layouts,
   fountain: fountain,

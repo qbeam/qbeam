@@ -130,6 +130,10 @@ async function send(opts) {
   var payload = c.container, flags = 0;
   if (passphrase !== null) { payload = await QBeam3.sealEnvelope(c.container, passphrase); flags = QBeam3.FLAG_ENCRYPTED; }
   var session = crypto.randomBytes(4).readUInt32BE(0);
+  if (payload.length > QBeam3.MAX_L) {
+    fail(name + " is " + payload.length.toLocaleString("en-US") + " bytes after compression; qbeam transfers are limited to " +
+         QBeam3.MAX_L / 1048576 + " MiB");
+  }
 
   var terminalMode = wantTerminal(opts);
   if (terminalMode && !opts.out) outPath = null;

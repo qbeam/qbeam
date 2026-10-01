@@ -44,13 +44,13 @@ def can_draw_blocks(stream=None) -> bool:
         return False
 
 
-def layout(cols: int, rows: int, max_version: int, half_blocks: bool = True):
+def layout(cols: int, rows: int, max_version: int, half_blocks: bool = True, min_t: int = protocol_v3.T_MIN):
     """The (version, across, down) that carries the most payload per frame in this window, larger codes winning ties;
     None if nothing fits. One row is kept for the status line."""
     best = None
     for v in VERSIONS:  # largest first, so ties keep the larger code
-        if v > max_version:
-            continue
+        if v > max_version or qr.capacity(v) - protocol_v3.OVERHEAD < min_t:
+            continue  # too big for the preset, or too small to keep the payload within the block limit
         size = 17 + 4 * v + 2 * QUIET
         w = size if half_blocks else 2 * size
         h = (size + 1) // 2 if half_blocks else size
@@ -102,6 +102,7 @@ def run(payload: bytes, flags: int, session: int, speed: str, label: str, out=No
     enable_windows_vt()
     half = can_draw_blocks(out)
     max_version, fps = PRESETS[speed]
+    min_t = max(protocol_v3.T_MIN, -(-len(payload) // protocol_v3.MAX_K))  # keep K within the receiver limit
     current = None  # (version, across, down, T, encoder)
     esi, shown, t0 = 0, 0, time.monotonic()
     out.write(HIDE + CLEAR)
@@ -109,7 +110,7 @@ def run(payload: bytes, flags: int, session: int, speed: str, label: str, out=No
         while True:
             start = time.monotonic()
             cols, rows = shutil.get_terminal_size((80, 24))
-            fit = layout(cols, rows, max_version, half)
+            fit = layout(cols, rows, max_version, half, min_t)
             if fit is None:
                 out.write(HOME + CLEAR + "Terminal too small for a QR code: make it at least 45x24, or use the browser sender.")
                 out.flush()

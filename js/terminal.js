@@ -14,10 +14,10 @@ var RESET = "\x1b[0m", HOME = "\x1b[H", CLEAR = "\x1b[2J", HIDE = "\x1b[?25l", S
 
 // The (version, across, down) carrying the most payload per frame in this window, larger codes winning ties;
 // null if nothing fits. One row is kept for the status line.
-function layout(cols, rows, maxVersion) {
+function layout(cols, rows, maxVersion, minT) {
   var best = null;
   VERSIONS.forEach(function (v) {
-    if (v > maxVersion) return;
+    if (v > maxVersion || CAPACITY_L[v] - QBeam3.OVERHEAD < (minT || QBeam3.T_MIN)) return; // too big, or too small for K limit
     var size = 17 + 4 * v + 2 * QUIET, across = Math.floor(cols / size), down = Math.floor((rows - 1) / Math.ceil(size / 2));
     if (across < 1 || down < 1) return;
     while (across * down > MAX_CODES) { if (across >= down) across--; else down--; }
@@ -58,13 +58,14 @@ function latin1(bytes) {
 // io: { out, size() -> [cols, rows], sleep(ms) -> Promise, shouldStop() -> bool, qrcode }
 async function run(payload, flags, session, speed, label, io) {
   var preset = PRESETS[speed], maxVersion = preset[0], fps = preset[1];
+  var minT = Math.max(QBeam3.T_MIN, Math.ceil(payload.length / QBeam3.MAX_K)); // keep K within the receiver limit
   var current = null, esi = 0, shown = 0, t0 = Date.now(), stopped = false;
   var onSig = function () { stopped = true; };
   process.once("SIGINT", onSig);
   io.out.write(HIDE + CLEAR);
   try {
     while (!stopped && !(io.shouldStop && io.shouldStop())) {
-      var start = Date.now(), sz = io.size(), fit = layout(sz[0], sz[1], maxVersion);
+      var start = Date.now(), sz = io.size(), fit = layout(sz[0], sz[1], maxVersion, minT);
       if (!fit) {
         io.out.write(HOME + CLEAR + "Terminal too small for a QR code: make it at least 45x24, or use the browser sender.");
         await io.sleep(500);

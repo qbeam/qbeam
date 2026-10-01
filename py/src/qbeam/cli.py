@@ -295,6 +295,10 @@ def send(args) -> None:
 
     terminal_mode = want_terminal(args)
     prep = prepare(raw, name, method, passphrase)
+    if len(prep["payload"]) > protocol_v3.MAX_L:
+        print(f"error: {name} is {len(prep['payload']):,} bytes after compression; qbeam transfers are limited to "
+              f"{protocol_v3.MAX_L // (1024 * 1024)} MiB", file=sys.stderr)
+        sys.exit(1)
     print_summary(prep, label, args.speed, terminal_mode)
     out_path = args.out or (None if terminal_mode else default_out)
     if out_path is not None:

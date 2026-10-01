@@ -68,6 +68,7 @@
     if (!p) return;
     if (p.error === "version") { notice = "The sender uses qbeam protocol v" + p.version + "; this receiver understands v3. Update the older side."; return; }
     if (p.error === "flags") { notice = "The sender uses a feature this receiver doesn't support. Update the receiver."; return; }
+    if (p.error === "limits") { notice = "The sender is offering a transfer larger than this receiver accepts (256 MB)."; return; }
     if (p.error) return; // crc / length: misread, just drop it
 
     var now = performance.now();

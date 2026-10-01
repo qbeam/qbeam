@@ -4,8 +4,8 @@
 
 Writes:
     ios/App/Sources/Assets.xcassets/AppIcon.appiconset/icon-1024.png  1024x1024, opaque (iOS masks the corners)
-    store/android/en-US/images/icon.png                               512x512 Play listing icon
-    store/android/en-US/images/featureGraphic.png                     1024x500 Play feature graphic
+    fastlane/metadata/android/en-US/images/icon.png                           512x512 Play listing icon
+    fastlane/metadata/android/en-US/images/featureGraphic.png                 1024x500 Play feature graphic
 """
 import io
 import json
@@ -36,7 +36,7 @@ def main() -> None:
     (appicon.parent / "Contents.json").write_text(json.dumps({"info": {"author": "xcode", "version": 1}}, indent=2) + "\n",
                                                  encoding="utf-8")
 
-    images = ROOT / "store/android/en-US/images"
+    images = ROOT / "fastlane/metadata/android/en-US/images"
     images.mkdir(parents=True, exist_ok=True)
     icon(512).save(images / "icon.png", optimize=True)
 

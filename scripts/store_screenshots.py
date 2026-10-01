@@ -5,7 +5,7 @@
 Inputs: store/screenshots/raw/{ios,android}-<n>-<slug>.jpg (unedited screen captures from real transfers) and the
 captions below. Outputs, in fastlane's layout:
     store/ios/screenshots/en-US/<n>_<slug>.jpg                 1290x2796 (App Store 6.9" slot; scaled down for others)
-    store/android/en-US/images/phoneScreenshots/<n>_<slug>.jpg 1080x1920 (Play: 9:16, within its 2:1 limit)
+    fastlane/metadata/android/en-US/images/phoneScreenshots/<n>_<slug>.jpg 1080x1920 (Play: 9:16, within its 2:1 limit)
 The capture is never altered, only scaled and placed under a caption. JPEG (both stores accept it) keeps the repo
 small: camera noise makes these PNGs ~3 MB each.
 """
@@ -17,7 +17,7 @@ ROOT = pathlib.Path(__file__).resolve().parent.parent / "store"
 RAW = ROOT / "screenshots" / "raw"
 OUT = {
     "ios": (ROOT / "ios" / "screenshots" / "en-US", (1290, 2796)),
-    "android": (ROOT / "android" / "en-US" / "images" / "phoneScreenshots", (1080, 1920)),
+    "android": (ROOT.parent / "fastlane" / "metadata" / "android" / "en-US" / "images" / "phoneScreenshots", (1080, 1920)),
 }
 CAPTIONS = {
     "receiving": ("Point your phone at the screen", "A grid of QR codes, read at ~280 KB/s"),

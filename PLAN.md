@@ -160,8 +160,8 @@ One release key signs every channel so they stay update-compatible (docs/RELEASI
 Free channels
 - [x] F.1 (done 2026-10-02) foss / play flavours; version from scripts/version.py; release signing from env; CI checks no network permission (both) and no billing (foss)
 - [x] F.2 (done 2026-10-02) Release workflow attaches the signed foss APK + SHA-256 to each GitHub release (skips without the key secret; refuses the debug key)
-- [ ] F.3 **User:** generate the release key and add the two GitHub secrets (docs/RELEASING.md), then bump the version so the first APK ships
-- [ ] F.4 qbeam.dev + README: Android download link, signing-certificate fingerprint, how to verify the SHA-256
+- [x] F.3 (done 2026-10-02: key CN=qbeam, cert SHA-256 C9:FC:71:E0…:72:14; first APK attached to v0.2.0 via android-apk.yml) **User:** generate the release key and add the two GitHub secrets (docs/RELEASING.md); first APK ships
+- [x] F.4 (done 2026-10-02) qbeam.dev + README: Android download link, signing-certificate fingerprint, how to verify the SHA-256
 - [ ] F.5 Store text at `fastlane/metadata/android/` (where F-Droid / IzzyOnDroid look); reproducible build check
 - [ ] F.6 IzzyOnDroid inclusion request (picks up APKs from GitHub releases; usually days)
 - [ ] F.7 F-Droid: build recipe + merge request to fdroiddata (user needs a GitLab account; review takes weeks). Risk: zxing-cpp's prebuilt native libs may need building from source in the recipe
@@ -289,6 +289,7 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 
 Newest first. One line per session: date · what changed · next step.
 
+- 2026-10-02 · First Android APK released: qbeam-0.2.0.apk (foss, signed with the release key, verified checksum + certificate) on the v0.2.0 GitHub release; download link and signing fingerprint on qbeam.dev and README · Next: F.5 fastlane metadata + reproducible build, F.6 IzzyOnDroid, F.7 F-Droid, F.8 mid-range phone then launch
 - 2026-10-02 · Release order changed: web receiver + Android APK through free channels first (GitHub releases, IzzyOnDroid, F-Droid), paid stores later. Android foss/play flavours (foss: no Google libraries; CI-checked), version from scripts/version.py, release workflow attaches a signed foss APK when the key secrets exist (tested with a throwaway key; foss runs on OnePlus) · Next: user generates the release key + secrets (F.3); Claude: download link + fingerprint (F.4), fastlane metadata (F.5), IzzyOnDroid/F-Droid (F.6/F.7)
 - 2026-10-02 · B.10 icons (iOS AppIcon, Play icon + feature graphic). B.11 trial: 10 free transfers then a one-time unlock, shared Trial in Kotlin + Swift (tests), Play Billing + StoreKit 2, build switch off by default, beta installs grandfathered, paywall links to the web receiver. Play Billing pulls Google's datatransport logging (INTERNET); user chose to strip the permission — billing still binds to the Play Store, no crash on OnePlus; CI fails if INTERNET returns · Next: user creates Play + Apple accounts and the dev.qbeam.unlock product; Claude: B.8/B.9 signing + CI bundles
 - 2026-10-02 · Store copy + screenshots (B.7): Play and App Store text in store/ (fastlane layout, CI length check), 3 captioned screenshots per store from real iPhone 15 / OnePlus 12 transfers. Fixed two app bugs found while capturing: Saved-line speed included passphrase typing (now ends at the last needed code; tests in Kotlin + Swift), and iOS copy names split .tar.gz (now "name 2.tar.gz") · Next: B.10 icons at store sizes, B.8/B.9 signing + CI bundles, B.11 trial behind a switch; user: Play + Apple accounts

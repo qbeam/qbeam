@@ -1,0 +1,1 @@
+First release on GitHub: receive files from the qbeam sender on your computer at up to ~280 KB/s. Saves to Downloads/qbeam; no internet permission.

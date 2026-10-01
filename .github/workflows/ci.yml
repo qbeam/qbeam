@@ -95,7 +95,8 @@ jobs:
         working-directory: android
         run: ./gradlew :core:test --console=plain
       - name: Android SDK platform 36
-        run: yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
+        # `|| true`: yes dies of SIGPIPE when sdkmanager exits first, which fails the step under pipefail.
+        run: (yes || true) | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" "platforms;android-36" "build-tools;36.0.0" > /dev/null
       - name: Build the app (debug APK)
         working-directory: android
         run: ./gradlew :app:assembleDebug --console=plain

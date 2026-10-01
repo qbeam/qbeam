@@ -35,6 +35,6 @@
   },
   "scripts": {
     "prepack": "node scripts/sync-assets.js",
-    "test": "node test/roundtrip.js && node test/v3.js"
+    "test": "node test/roundtrip.js && node test/v3.js && node test/terminal_decode.js"
   }
 }

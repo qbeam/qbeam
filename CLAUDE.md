@@ -12,8 +12,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 
 <!-- Update this block at the end of every work session. -->
 - **Phase:** P1 (in progress); P0 done except user items
-- **Last done:** protocol v3 live in both CLIs, the sender page and a new single-file receiver; browser e2e test passes (2026-10-01)
-- **Next up:** terminal mode (P1.3–P1.5: own pure-Python QR encoder checked against qrcodegen.js, half-block renderer, Windows VT), .pyz (P1.9), then ask the user about releasing 0.1.0. P0.2 code of conduct and P0.12 benchmark still open (user)
+- **Last done:** terminal mode (own QR encoder + half-block renderer) and single-file qbeam.pyz, both tested end to end (2026-10-01)
+- **Next up:** ask the user about releasing 0.1.0 (first v3 release); then manual checks P1.16–19 (Windows console, locked-down VM, real phone), P1.13 decompression cap, launch prep P1.20–22. P0.2 code of conduct and P0.12 benchmark still open (user)
 - **Blockers / open decisions:** paid strategy for the web decoder (deferred by user)
 
 ## Tracking rules
@@ -29,6 +29,8 @@ rebuilt from a camera on another device. For developers in restricted, monitored
 | --- | --- |
 | `py/src/qbeam/cli.py` | Python CLI: `qbeam send` (file, folder as one archive, or `-` stdin; `--speed`, `--encrypt`, `--name`, `--no-open`) writes a self-contained `*.sender.html`; `qbeam receive` opens the receiver. Stdlib only. Repo files win over packaged `assets/` |
 | `py/src/qbeam/protocol_v3.py`, `crypto_v3.py` | v3 encoder (framing, segmented fountain, container) and encryption envelope (`cryptography` optional) |
+| `py/src/qbeam/qr.py`, `terminal.py` | Pure-Python QR encoder (byte mode, fixed mask; matches qrcodegen.js) and the terminal sender (`--tty`) |
+| `py/build_pyz.py` | Builds the single-file `qbeam-<version>.pyz` (assets read via pkgutil inside the zip) |
 | `py/encode.py` | Shim: `python3 py/encode.py <path> [opts]` = `qbeam send` from a checkout |
 | `py/pyproject.toml`, `py/sync_assets.py` | PyPI packaging (extra `crypto`); `sync_assets.py` copies web/js assets into the package at release time |
 | `js/qbeam3.js` | Protocol v3 reference codec (also the npm package's `main`) |
@@ -48,7 +50,7 @@ fast 3x2 v25 @15, max 3x2 v30 @30 (T = capacity − 22).
 
 ## Tests and releases
 
-- `python3 -m unittest discover -s py/tests -v`, `node js/test/roundtrip.js`, `node js/test/v3.js` (repo root); CI runs them on every PR, plus the encryption tests with `cryptography` installed. Browser e2e: `web/test/e2e.html` (manual, needs a visible window).
+- `python3 -m unittest discover -s py/tests -v`, `node js/test/roundtrip.js`, `node js/test/v3.js`, `node js/test/terminal_decode.js` (repo root); CI runs them on every PR, plus the encryption tests with `cryptography` installed. Browser e2e: `web/test/e2e.html` (manual, needs a visible window).
 - Release = bump with `python3 scripts/version.py X.Y.Z` and merge to main. See docs/RELEASING.md. Never publish by hand after the first npm version.
 - After editing receiver files, `web/vendor/zxing-*` or `js/qbeam3.js`, run `python3 web/build.py` and commit `web/dist/decoder.html` (CI checks it).
 - Python file I/O always passes `encoding="utf-8"` (Windows defaults to cp1252).

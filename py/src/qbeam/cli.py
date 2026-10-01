@@ -8,6 +8,7 @@ Usage:
     cat trace.txt | qbeam send - --name trace.txt
     qbeam send secrets.env --encrypt       # prints a passphrase to type on the phone
     qbeam send big.bin --speed max         # 3x2 large codes at 30 fps (needs a 60 fps phone camera)
+    qbeam send app.log --tty               # draw the codes in this terminal (automatic over SSH)
     qbeam receive                          # opens the camera receiver page
 
 On the phone, open the receiver page (`qbeam receive` prints its path; copy it over once, it works offline)
@@ -24,13 +25,15 @@ import json
 import lzma
 import os
 import pathlib
+import pkgutil
 import secrets
 import sys
 import tarfile
+import time
 import webbrowser
 
 from . import __version__
-from . import crypto_v3, protocol_v3
+from . import crypto_v3, protocol_v3, terminal
 
 HERE = pathlib.Path(__file__).resolve().parent
 PACKAGED = HERE / "assets"            # filled by py/sync_assets.py when building a release
@@ -60,6 +63,17 @@ def asset(name: str) -> pathlib.Path:
     # In a checkout the repo's own files win, so a stale assets/ copy from an earlier release build is never used.
     repo = REPO_ASSETS[name]
     return repo if repo.is_file() else PACKAGED / name
+
+
+def read_asset(name: str) -> str:
+    """Asset text from the checkout, the installed package, or, inside qbeam.pyz, the zip itself."""
+    path = asset(name)
+    if path.is_file():
+        return path.read_text(encoding="utf-8")
+    data = pkgutil.get_data(__package__, "assets/" + name)
+    if data is None:
+        raise FileNotFoundError(name)
+    return data.decode("utf-8")
 
 
 def is_sender_page(p: pathlib.Path) -> bool:
@@ -130,40 +144,76 @@ def json_for_script(obj) -> str:
     return json.dumps(obj).replace("<", "\\u003c").replace(">", "\\u003e").replace("&", "\\u0026")
 
 
-def build_page(raw: bytes, filename: str, label: str, out_path: pathlib.Path, method: str, speed: str,
-               passphrase: str = None) -> dict:
+def prepare(raw: bytes, filename: str, method: str, passphrase: str = None) -> dict:
+    """The v3 payload for one transfer: container, optionally sealed in an encryption envelope."""
     container, saved_name, how = make_container(raw, filename, method)
     payload, flags = container, 0
     if passphrase is not None:
         payload, flags = crypto_v3.seal(container, passphrase), protocol_v3.FLAG_ENCRYPTED
-    session = secrets.randbits(32)
+    return {"payload": payload, "flags": flags, "session": secrets.randbits(32), "saved_name": saved_name,
+            "how": how, "raw_len": len(raw), "encrypted": passphrase is not None}
 
+
+def write_page(prep: dict, out_path: pathlib.Path, speed: str) -> None:
     page = (
-        asset("sender_shell.html").read_text(encoding="utf-8")
-        .replace("__TITLE__", html.escape(saved_name))
-        .replace("/*__QRCODEGEN__*/", asset("qrcodegen.js").read_text(encoding="utf-8"))
-        .replace("/*__QBEAM3__*/", asset("qbeam3.js").read_text(encoding="utf-8"))
-        .replace("/*__PAYLOAD__*/", json_for_script({"session": session, "flags": flags,
-                                                     "dataB64": base64.b64encode(payload).decode("ascii")}))
-        .replace("/*__META__*/", json_for_script({"filename": saved_name, "size": len(raw),
-                                                  "encrypted": passphrase is not None}))
+        read_asset("sender_shell.html")
+        .replace("__TITLE__", html.escape(prep["saved_name"]))
+        .replace("/*__QRCODEGEN__*/", read_asset("qrcodegen.js"))
+        .replace("/*__QBEAM3__*/", read_asset("qbeam3.js"))
+        .replace("/*__PAYLOAD__*/", json_for_script({"session": prep["session"], "flags": prep["flags"],
+                                                     "dataB64": base64.b64encode(prep["payload"]).decode("ascii")}))
+        .replace("/*__META__*/", json_for_script({"filename": prep["saved_name"], "size": prep["raw_len"],
+                                                  "encrypted": prep["encrypted"]}))
         .replace("/*__SPEED__*/", json_for_script(speed))
-        .replace("/*__APP__*/", asset("sender_app.js").read_text(encoding="utf-8"))
+        .replace("/*__APP__*/", read_asset("sender_app.js"))
     )
     out_path.write_text(page, encoding="utf-8")
 
-    seconds = len(payload) / (SPEEDS[speed] * TYPICAL_EFFICIENCY)
-    print(f"Input:       {label} ({len(raw):,} bytes)")
-    print(f"Sending:     {saved_name} as {len(payload):,} bytes"
-          f" ({'gzip' if how == 'gzip' else 'xz' if how == 'xz' else 'uncompressed'}"
-          f"{', encrypted' if passphrase is not None else ''})")
-    print(f"Speed:       {speed}, about {max(1, round(seconds))} s with a good camera")
-    print(f"Sender page: {out_path}")
-    return {"payload_len": len(payload), "session": session, "saved_name": saved_name}
+
+def print_summary(prep: dict, label: str, speed: str, terminal_mode: bool) -> None:
+    how = {"gzip": "gzip", "xz": "xz"}.get(prep["how"], "uncompressed")
+    print(f"Input:       {label} ({prep['raw_len']:,} bytes)")
+    print(f"Sending:     {prep['saved_name']} as {len(prep['payload']):,} bytes"
+          f" ({how}{', encrypted' if prep['encrypted'] else ''})")
+    if terminal_mode:
+        print(f"Speed:       {speed}, terminal mode (a few KB/s; the browser sender is much faster)")
+    else:
+        seconds = len(prep["payload"]) / (SPEEDS[speed] * TYPICAL_EFFICIENCY)
+        print(f"Speed:       {speed}, about {max(1, round(seconds))} s with a good camera")
+
+
+def want_terminal(args) -> bool:
+    """Terminal mode when asked, or when there's evidently no browser to show a page in."""
+    if args.tty:
+        return True
+    if args.browser or not sys.stdout.isatty():
+        return False
+    if os.environ.get("SSH_CONNECTION") or os.environ.get("SSH_TTY"):
+        return True
+    return sys.platform.startswith("linux") and not (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
+
+
+def wait_before_codes(seconds: int = 15) -> None:
+    """In terminal mode the terminal is the QR screen: let the user note the passphrase before codes replace it."""
+    print("             Note it now; it's cleared before the codes appear. Press Enter to start.")
+    try:
+        if sys.stdin.isatty():
+            input()
+            return
+        with open("CON" if os.name == "nt" else "/dev/tty", encoding="utf-8") as tty:  # stdin may be the data pipe
+            tty.readline()
+    except OSError:
+        for left in range(seconds, 0, -1):
+            print(f"\r             Starting in {left:2d} s… ", end="", flush=True)
+            time.sleep(1)
+        print()
 
 
 def receive(no_open: bool) -> None:
     path = asset("decoder.html")
+    if not path.is_file():  # running from qbeam.pyz: write the page out so a browser (or a phone) can open it
+        path = pathlib.Path.cwd() / "qbeam-receiver.html"
+        path.write_text(read_asset("decoder.html"), encoding="utf-8")
     print(f"Receiver page: {path}")
     print("Copy it to your phone once (it works offline) and open it there, or use this computer's webcam.")
     if not no_open:
@@ -191,6 +241,11 @@ def main(argv=None) -> None:
     sp.add_argument("--name", help="Filename the receiver saves (default: the input's name; stdin.txt for stdin)")
     sp.add_argument("--out", type=pathlib.Path, help="Where to write the sender page (default: next to the input)")
     sp.add_argument("--no-open", action="store_true", help="Don't open the sender page in a browser")
+    mode = sp.add_mutually_exclusive_group()
+    mode.add_argument("--tty", action="store_true",
+                      help="Draw the codes in this terminal instead of a browser page (automatic over SSH and on "
+                           "Linux without a display). Slower; works anywhere")
+    mode.add_argument("--browser", action="store_true", help="Always write and open the browser sender page")
     sp.add_argument("--exclude", action="append", default=[], metavar="PATTERN",
                     help="Folders: skip files/dirs matching this glob (name or relative path). Repeatable. "
                          ".git, caches and the folder's .gitignore patterns are always skipped.")
@@ -217,32 +272,44 @@ def send(args) -> None:
             sys.exit(2)
         passphrase = os.environ.get("QBEAM_PASSPHRASE") or new_passphrase()
 
+    extract_hint = None
     if args.path == "-":
-        raw = sys.stdin.buffer.read()
-        name = args.name or "stdin.txt"
-        out_path = args.out or pathlib.Path.cwd() / f"{name}.sender.html"
-        build_page(raw, name, "stdin", out_path, args.compress or "gzip", args.speed, passphrase)
+        raw, name, label, method = sys.stdin.buffer.read(), args.name or "stdin.txt", "stdin", args.compress or "gzip"
+        default_out = pathlib.Path.cwd() / f"{name}.sender.html"
     else:
         path = pathlib.Path(args.path)
         if path.is_dir():
             folder = path.resolve().name
-            raw = archive_dir(path, args.exclude)
-            method = args.compress or "xz"
-            out_path = args.out or path.resolve().parent / f"{folder}.tar.sender.html"
-            build_page(raw, args.name or f"{folder}.tar", f"{path}/ (folder)", out_path, method, args.speed, passphrase)
-            print(f"On the receiver, extract with:  tar -xf {folder}.tar{'.xz' if method == 'xz' else ''}")
+            raw, name, label, method = archive_dir(path, args.exclude), args.name or f"{folder}.tar", f"{path}/ (folder)", args.compress or "xz"
+            default_out = path.resolve().parent / f"{folder}.tar.sender.html"
+            extract_hint = f"On the receiver, extract with:  tar -xf {folder}.tar{'.xz' if method == 'xz' else ''}"
         elif path.is_file():
-            out_path = args.out or path.with_suffix(path.suffix + ".sender.html")
-            build_page(path.read_bytes(), args.name or path.name, str(path), out_path, args.compress or "gzip",
-                       args.speed, passphrase)
+            raw, name, label, method = path.read_bytes(), args.name or path.name, str(path), args.compress or "gzip"
+            default_out = path.with_suffix(path.suffix + ".sender.html")
         else:
             print(f"error: {path} is not a file or folder", file=sys.stderr)
             sys.exit(1)
 
+    terminal_mode = want_terminal(args)
+    prep = prepare(raw, name, method, passphrase)
+    print_summary(prep, label, args.speed, terminal_mode)
+    out_path = args.out or (None if terminal_mode else default_out)
+    if out_path is not None:
+        write_page(prep, out_path, args.speed)
+        print(f"Sender page: {out_path}")
+    if extract_hint:
+        print(extract_hint)
     if passphrase is not None:
         print()
         print(f"Passphrase:  {passphrase}")
         print("             Type it on the phone when asked. Don't show it on the screen the camera sees.")
+
+    if terminal_mode:
+        if passphrase is not None:
+            wait_before_codes()
+        terminal.run(prep["payload"], prep["flags"], prep["session"], args.speed, prep["saved_name"])
+        print("Stopped. If the phone didn't save the file yet, run the same command again.")
+        return
     print()
     if args.no_open or not webbrowser.open(out_path.resolve().as_uri()):
         print(f"Open {out_path} in a browser, then point the phone's qbeam receiver at it.")

@@ -12,7 +12,7 @@ Product and command name: **qbeam** (chosen 2026-09-30; free on PyPI, npm, `.dev
 | Phase | Target window | Status | Exit gate |
 | --- | --- | --- | --- |
 | P0 Foundations | Oct 1–7, 2026 | Done except user items (P0.2 CoC, P0.10 handles/stores, P0.12 deferred) | Repo, spec draft, CI green on 3 OSes |
-| P1 Python CLI + terminal mode | Oct 8–31 | In progress (v3 senders + receiver done; terminal mode, .pyz next) | **Gate 1:** installs and sends on macOS/Linux/Windows with no admin rights |
+| P1 Python CLI + terminal mode | Oct 8–31 | Mostly done: v3, terminal mode, .pyz; left: P1.4a, P1.13 cap, P1.16–19 install/manual checks, P1.20–22 marketing | **Gate 1:** installs and sends on macOS/Linux/Windows with no admin rights |
 | P2 Speed parity, web decoder v2, npm, public launch | Nov 1–30 | Not started | **Gate 2:** ≥ 100 KB/s goodput on reference rig (web sender + best decoder); 1k installs |
 | P3 Android app (trial + unlock) | Dec 1 – Jan 15, 2027 | Not started | **Gate 3:** app ≥ fastest competitor on the same rig (target ≥ 130 KB/s); 100 paid unlocks |
 | P4 iOS app, $19 bundle, Pro web receiver | Q1 2027 | Not started | iOS live; bundle key works on all platforms |
@@ -77,22 +77,22 @@ Marketing
 Development
 - [x] P1.1 (done 2026-10-01: send / receive / --version on protocol v3) Package `encode.py` as `qbeam` with entry point; commands: `send`, `receive`, `version` — started early for the 0.0.1 name claim: `qbeam send` / `receive` / `--version` exist in py/ and js/; still needs the P1 features below
 - [x] P1.2 (done 2026-10-01: stdin with --name; folders always one archive; .gitignore + junk + --exclude skipped) `send <file>` / `send -` (stdin) / `send <dir> --archive` (respect `.gitignore` + existing junk patterns) / `--exclude`
-- [ ] P1.3 Vendor a pure-Python QR encoder (e.g. Nayuki `qrcodegen`, MIT) for terminal mode
-- [ ] P1.4 Terminal renderer: Unicode half-blocks (2 modules per char), ANSI cursor-home redraw, auto-fit QR version to terminal size, `--invert` for light themes, clean exit on Ctrl-C (restore cursor/screen)
-- [ ] P1.5 Windows console: enable VT processing via ctypes; UTF-8 output; fall back gracefully on legacy conhost
-- [ ] P1.4a Terminal graphics protocols for pixel output where supported (kitty, iTerm2 inline images, sixel incl. Windows Terminal); detect and prefer them over half-blocks
-- [ ] P1.6 (pixel sender opens by default since 2026-10-01; --no-open; terminal fallback waits on P1.4) Pixel sender: `send` opens the full-speed sender page (self-contained HTML → temp file → `webbrowser`) by default when a display is available; `--tty` forces terminal mode; headless sessions fall back to terminal automatically. All heavy encoding (fountain + QR) runs in JS/WASM in the page, not in Python.
+- [x] P1.3 (done 2026-10-01: own encoder py/src/qbeam/qr.py instead of vendoring; module-for-module identical to qrcodegen.js on 19 vectors) Vendor a pure-Python QR encoder (e.g. Nayuki `qrcodegen`, MIT) for terminal mode
+- [x] P1.4 (done 2026-10-01: half blocks in true black on white, auto-fit by payload per frame, cursor/screen restored on Ctrl-C; two-space fallback without Unicode) Terminal renderer: Unicode half-blocks (2 modules per char), ANSI cursor-home redraw, auto-fit QR version to terminal size, `--invert` for light themes, clean exit on Ctrl-C (restore cursor/screen)
+- [x] P1.5 (done 2026-10-01: VT processing enabled via ctypes; Python writes Unicode to the Windows console natively; not yet tried in a real conhost) Windows console: enable VT processing via ctypes; UTF-8 output; fall back gracefully on legacy conhost
+- [ ] P1.4a (not done: half blocks only so far) Terminal graphics protocols for pixel output where supported (kitty, iTerm2 inline images, sixel incl. Windows Terminal); detect and prefer them over half-blocks
+- [x] P1.6 (done 2026-10-01: browser page by default; --tty, and automatic terminal mode over SSH / Linux without a display; --browser forces the page) Pixel sender: `send` opens the full-speed sender page (self-contained HTML → temp file → `webbrowser`) by default when a display is available; `--tty` forces terminal mode; headless sessions fall back to terminal automatically. All heavy encoding (fountain + QR) runs in JS/WASM in the page, not in Python.
 - [x] P1.7 (done 2026-10-01: prints and opens the v3 receiver page) `receive`: opens the offline decoder page (webcam) for laptop-to-laptop / phone-to-laptop
 - [x] P1.8 (done 2026-10-01: size, compression, encryption, speed preset and estimated time) Print SHA-256 and a short summary (size, compressed size, frames, estimated time) before sending
-- [ ] P1.9 Build a single-file `qbeam.pyz` (stdlib `zipapp`) in CI; attach to GitHub releases with checksums
+- [x] P1.9 (done 2026-10-01: py/build_pyz.py, 591 KB, assets read via pkgutil; built and run on 3 OSes in CI, attached to GitHub releases) Build a single-file `qbeam.pyz` (stdlib `zipapp`) in CI; attach to GitHub releases with checksums
 - [ ] P1.10 Publish to TestPyPI, then PyPI; verify `uvx qbeam`, `pipx install qbeam`, `pip install --user qbeam`
 - [x] P1.11 (done 2026-10-01: folders arrive as .tar.xz; single files are gunzipped in the browser; already-compressed files sent as-is) Decoder: in-browser `.tar.gz` handling decision (save as-is vs. prefer gzip'd tar for single-file receivers)
 
 Testing
 - [x] P1.12 (done 2026-10-01: py/tests/test_cli.py rewritten for v3, incl. stdin, .gitignore, HTML escaping, encryption) Unit: CLI arg parsing, archive excludes, stdin, compression choices, filename encoding (unicode, long names)
 - [ ] P1.13 (receiver strips path components and rejects ./..; decompression-size cap still to do) Security: sanitize received filenames (no path separators, no `..`, no absolute paths); cap decompressed size (zip-bomb guard)
-- [ ] P1.14 Terminal snapshot tests: rendered frame text for fixed inputs across widths
-- [ ] P1.15 Decode-what-we-render test: render terminal frames to images (dev-only deps: Pillow, `zxing-cpp`) and decode them back
+- [x] P1.14 (done 2026-10-01: py/tests/test_terminal.py parses rendered frames back to modules) Terminal snapshot tests: rendered frame text for fixed inputs across widths
+- [x] P1.15 (done 2026-10-01: js/test/terminal_decode.js paints terminal frames as 8x16 px glyphs, zxing decodes, file rebuilt) Decode-what-we-render test: render terminal frames to images (dev-only deps: Pillow, `zxing-cpp`) and decode them back
 - [ ] P1.16 **Install matrix in CI, as non-admin user:** `uvx`, `pipx`, `pip --user`, `.pyz` × macOS / Ubuntu / Windows × Python 3.8–3.13
 - [ ] P1.17 Manual terminal matrix: Windows Terminal, conhost, PowerShell, iTerm2, Terminal.app, GNOME Terminal, VS Code terminal, tmux over SSH. Record results in `bench/terminals.md`
 - [ ] P1.18 Manual locked-down check: a Windows VM with AppLocker default rules + a standard (non-admin) user; confirm `py -m pip install --user` and `.pyz` paths work
@@ -253,6 +253,8 @@ Metrics to review monthly: PyPI/npm downloads, GitHub stars, install success rep
 ## Progress log
 
 Newest first. One line per session: date · what changed · next step.
+
+- 2026-10-01 · Terminal mode: own pure-Python QR encoder (identical to qrcodegen.js on 19 vectors), half-block renderer with layout by payload per frame, auto over SSH / no display, passphrase shown before codes. zxing decodes painted terminal frames back to the file (CI). Single-file qbeam.pyz (591 KB) built and run on 3 OSes in CI, attached to releases. Windows CI fix: LF line endings pinned · Next: user decides on 0.1.0 release; then P1.16–19 checks, P1.20–22 launch prep
 
 - 2026-10-01 · Protocol v3 end to end: new sender page (grid, presets, fixed mask), new single-file receiver (zxing WASM workers, Y-plane, passphrase prompt), Python and npm CLIs on v3 (stdin, folders with .gitignore, --speed, --encrypt, auto-open). Browser e2e test (web/test/e2e.html) passes for text, 30 KB binary at max speed and encrypted. Fixed: checkouts used stale packaged assets. jsQR removed · Next: terminal mode (P1.3–P1.5), .pyz (P1.9), then release 0.1.0
 

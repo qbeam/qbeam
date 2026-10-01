@@ -38,6 +38,8 @@ jobs:
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/roundtrip.js
       - name: Protocol v3 tests (JS codec, Python-encoded codes)
         run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/v3.js
+      - name: Terminal mode decoded by zxing
+        run: PYTHON="$(uv python find ${{ matrix.python }})" node js/test/terminal_decode.js
       - name: Versions match
         run: '"$(uv python find ${{ matrix.python }})" scripts/version.py'
 
@@ -74,6 +76,10 @@ jobs:
           python3 py/sync_assets.py
           uv build py --out-dir dist/python
           uvx twine check dist/python/*
+      - name: Build single-file qbeam.pyz
+        run: |
+          python3 py/build_pyz.py
+          mkdir -p dist/pyz && cp py/dist/*.pyz dist/pyz/
       - name: Build npm tarball
         run: |
           mkdir -p dist/npm
@@ -86,6 +92,10 @@ jobs:
         with:
           name: npm-dist
           path: dist/npm/
+      - uses: actions/upload-artifact@v4
+        with:
+          name: pyz-dist
+          path: dist/pyz/
 
   install:
     # Installs the built packages as a normal user, the way people will: uvx and npx, no admin rights.
@@ -111,13 +121,25 @@ jobs:
         with:
           name: npm-dist
           path: dist/npm
+      - uses: actions/download-artifact@v4
+        with:
+          name: pyz-dist
+          path: dist/pyz
+      - name: python qbeam.pyz (Python ${{ matrix.python }}, nothing installed)
+        run: |
+          pyz=$(ls dist/pyz/*.pyz)
+          py="$(uv python find ${{ matrix.python }} 2>/dev/null || (uv python install ${{ matrix.python }} >/dev/null && uv python find ${{ matrix.python }}))"
+          "$py" "$pyz" --version
+          "$py" "$pyz" send README.md --browser --no-open --out "$RUNNER_TEMP/pyz.html"
+          grep -q QBeam3 "$RUNNER_TEMP/pyz.html"
+          (cd "$RUNNER_TEMP" && "$py" "$GITHUB_WORKSPACE/$pyz" receive --no-open && test -s qbeam-receiver.html)
       - name: uvx qbeam (Python ${{ matrix.python }})
         run: |
           expected="qbeam $(uv run --no-project --python ${{ matrix.python }} python scripts/version.py)"
           wheel=$(ls dist/python/*.whl)
           got=$(uvx --python ${{ matrix.python }} --from "$wheel" qbeam --version)
           test "$got" = "$expected" || { echo "expected '$expected', got '$got'"; exit 1; }
-          uvx --python ${{ matrix.python }} --from "$wheel" qbeam send README.md --no-open --out "$RUNNER_TEMP/py.html"
+          uvx --python ${{ matrix.python }} --from "$wheel" qbeam send README.md --browser --no-open --out "$RUNNER_TEMP/py.html"
           uvx --python ${{ matrix.python }} --from "$wheel" qbeam receive --no-open
       - name: npx qbeam
         run: |

@@ -15,7 +15,10 @@ uvx qbeam send ./project      # a folder goes as one .tar.xz; .gitignore respect
    SHA-256 matches.
 
 Options: `--speed safe|fast|max` (default fast; max needs a 60 fps phone camera), `--encrypt` (prints a passphrase
-to type on the phone; never shown on the QR screen), `--name` and `-` for stdin, `--no-open`.
+to type on the phone; never shown on the QR screen), `--name` and `-` for stdin, `--no-open`, `--tty` (draw the codes
+in the terminal; automatic over SSH and on Linux without a display; slower than the browser page).
+
+Nothing installed at all? Each GitHub release has a single-file `qbeam-<version>.pyz`: `python3 qbeam-<version>.pyz send app.log`.
 
 Encryption needs the optional package: `pip install "qbeam[crypto]"` (or `uvx --from "qbeam[crypto]" qbeam send ... --encrypt`).
 

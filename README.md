@@ -18,7 +18,9 @@ uvx qbeam send path/to/file      # or: pipx install qbeam · npx qbeam send path
 
 Folders go as one archive (`qbeam send ./project`, `.gitignore` respected). `--speed max` reached 246 KB/s on an
 iPhone in testing; `--encrypt` adds AES-256-GCM with a passphrase you type on the phone
-(`pip install "qbeam[crypto]"`). From a checkout, without installing: `python3 py/encode.py path/to/file`.
+(`pip install "qbeam[crypto]"`). Over SSH or without a browser, `--tty` draws the codes in the terminal instead
+(automatic over SSH). No install at all: download `qbeam-<version>.pyz` from the GitHub release and run
+`python3 qbeam-<version>.pyz send file`. From a checkout: `python3 py/encode.py path/to/file`.
 
 ## Repository layout
 

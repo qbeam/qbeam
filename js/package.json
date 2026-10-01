@@ -1,6 +1,6 @@
 {
   "name": "qbeam",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Move files from a locked-down machine to your phone over animated QR codes. No network, no admin rights.",
   "keywords": [
     "qr",

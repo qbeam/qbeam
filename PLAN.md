@@ -165,7 +165,7 @@ Claude
 - [x] B.7 (done 2026-10-02: store/ in fastlane layout, length check in CI, 3 captioned screenshots per store from real transfers) Store copy: offline file transfer between your own devices; never framed as getting around security; screenshots from both phones
 - [ ] B.8 Android release signing: upload key kept outside the repo (+ CI secret), Play App Signing, `bundleRelease` AAB in CI
 - [ ] B.9 iOS archive + upload (Release, automatic signing) and a CI build of the archive
-- [ ] B.10 App icons and launch assets at store sizes; version/build numbers synced with scripts/version.py
+- [x] B.10 (done 2026-10-02: iOS AppIcon 1024, Play icon 512 + feature graphic 1024x500, from scripts/store_icons.py; versions sync is part of B.8/B.9) App icons and launch assets at store sizes; version/build numbers synced with scripts/version.py
 - [ ] B.11 Trial + unlock behind a build switch (P3.7/P3.8, P4.2), with beta testers grandfathered to a free unlock
 - [ ] B.12 Upload: Play closed track + TestFlight external beta (needs Beta App Review)
 

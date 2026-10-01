@@ -8,6 +8,7 @@ the App Store) so uploads can be automated later.
 | `android/en-US/*.txt`, `changelogs/<versionCode>.txt` | Play title, short and full description, release notes |
 | `ios/en-US/*.txt` | App Store name, subtitle, promotional text, description, keywords, URLs, release notes |
 | `screenshots/raw/<platform>-<n>-<slug>.jpg` | Unedited captures from real transfers on real phones |
+| `android/en-US/images/icon.png`, `featureGraphic.png` | Play icon (512) and feature graphic (1024×500); `uv run --with pillow python scripts/store_icons.py` also writes the iOS AppIcon |
 | `ios/screenshots/en-US/`, `android/en-US/images/phoneScreenshots/` | Generated: captioned, sized for each store |
 
 - `python3 scripts/check_store.py` checks every field against the store limits (CI runs it).

@@ -70,8 +70,9 @@ HEAD_EXTRA = """<link rel="manifest" href="manifest.webmanifest">
 """
 
 
-def png(size: int) -> bytes:
-    """The qbeam icon (three finder squares and a few modules on a dark tile), drawn without any image library."""
+def png(size: int, rounded: bool = True) -> bytes:
+    """The qbeam icon (three finder squares and a few modules on a dark tile), drawn without any image library.
+    rounded=False gives a full-bleed opaque square, as app stores want (they apply their own corner mask)."""
     cell = size / 64
     dark, white = (27, 27, 27), (255, 255, 255)
 
@@ -82,7 +83,7 @@ def png(size: int) -> bytes:
         x, y = px / cell, py / cell
         r = 14  # rounded corners: distance from the inner rectangle must stay within the radius
         dx, dy = max(r - x, 0, x - (64 - r)), max(r - y, 0, y - (64 - r))
-        if dx * dx + dy * dy > r * r:
+        if rounded and dx * dx + dy * dy > r * r:
             return None
         for fx, fy in ((10, 10), (38, 10), (10, 38)):
             if inside(x, y, fx, fy, 16, 16) and not inside(x, y, fx + 4, fy + 4, 8, 8):

@@ -111,6 +111,13 @@ Tests (from the repo root): `python3 -m unittest discover -s py/tests` and `node
 iOS codec: `swift test` in `ios/QBeamKit`. Releases: [docs/RELEASING.md](docs/RELEASING.md).
 </details>
 
+## Support qbeam
+
+qbeam is free and open source. If it saves you time, you can help keep it going:
+
+[![Sponsor on GitHub](https://img.shields.io/badge/sponsor-GitHub-ea4aaa?logo=githubsponsors&logoColor=white)](https://github.com/sponsors/MLTurtle)
+[![Buy me a coffee on Ko-fi](https://img.shields.io/badge/buy%20me%20a%20coffee-Ko--fi-ff5e5b?logo=kofi&logoColor=white)](https://ko-fi.com/MLTurtle)
+
 ## License
 
 Apache-2.0: see [LICENSE](LICENSE). Third-party components: [THIRD_PARTY_NOTICES.md](THIRD_PARTY_NOTICES.md).

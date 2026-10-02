@@ -1,6 +1,6 @@
 # qbeam
 
-Move a file from a locked-down machine to your phone over animated QR codes. No network, no USB,
+Send a file from your terminal or browser to your phone over animated QR codes. No network, no USB,
 no admin rights, and nothing to install on the receiving side. Transfers are verified with SHA-256.
 
 ```bash

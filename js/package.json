@@ -1,13 +1,13 @@
 {
   "name": "qbeam",
   "version": "0.2.1",
-  "description": "Move files from a locked-down machine to your phone over animated QR codes. No network, no admin rights.",
+  "description": "Send files from a terminal or browser to your phone over animated QR codes. Offline, no admin rights.",
   "keywords": [
     "qr",
     "qr-code",
     "file-transfer",
     "offline",
-    "air-gap",
+    "terminal",
     "fountain-code",
     "cli"
   ],

@@ -5,14 +5,14 @@ build-backend = "setuptools.build_meta"
 [project]
 name = "qbeam"
 dynamic = ["version"]
-description = "Move files from a locked-down machine to your phone over animated QR codes. No network, no admin rights."
+description = "Send files from a terminal or browser to your phone over animated QR codes. Offline, no admin rights."
 readme = "README.md"
 license = "Apache-2.0"
 license-files = ["LICENSE", "THIRD_PARTY_NOTICES.md"]
 requires-python = ">=3.8"
 dependencies = []
 
-keywords = ["qr", "qr-code", "file-transfer", "offline", "air-gap", "fountain-code", "cli"]
+keywords = ["qr", "qr-code", "file-transfer", "offline", "terminal", "fountain-code", "cli"]
 classifiers = [
     "Development Status :: 3 - Alpha",
     "Environment :: Console",
